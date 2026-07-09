@@ -1,0 +1,117 @@
+# =============================================================================
+# Domain: Equity
+# Entity: ShareClass + Shareholder
+# Description: The cap-table masters. ShareClass is a category of shares with a
+# par (nominal) value — the split point for capital vs premium on issue.
+# Shareholder is a holder of shares (a logical ref to a party). Region-neutral.
+# =============================================================================
+
+models:
+  - name: ShareClass
+    collection: share_classes
+    description: "A class of shares (ordinary / preferred) with a par value"
+
+    fields:
+      id:
+        type: uuid
+        attributes: ["@id", "@default(uuid)"]
+        description: "Unique share-class identifier"
+
+      company_id:
+        type: uuid
+        attributes: ["@required", "@exclude_from_foreign_key_check"]
+        description: "Books owner # logical FK to organization.Company.id"
+
+      code:
+        type: string
+        attributes: ["@required", "@max(40)"]
+        description: "Short code unique within a company (e.g. ORD, PREF-A)"
+
+      name:
+        type: string
+        attributes: ["@required", "@max(120)"]
+        description: "Class name"
+
+      par_value:
+        type: decimal
+        attributes: ["@required", "@precision(20,4)", "@non_negative"]
+        description: "Nominal value per share — capital is booked at par, the excess to share premium"
+
+      currency:
+        type: string
+        attributes: ["@required", "@max(3)"]
+        description: "ISO currency of par/issue amounts (functional currency; multi-currency is corporate's job)"
+
+      share_capital_account_id:
+        type: uuid
+        attributes: ["@required", "@exclude_from_foreign_key_check"]
+        description: "Equity account for capital at par # logical FK to accounting.Account.id"
+
+      share_premium_account_id:
+        type: uuid
+        attributes: ["@required", "@exclude_from_foreign_key_check"]
+        description: "Equity account for the excess over par (APIC) # logical FK to accounting.Account.id"
+
+      is_active:
+        type: bool
+        attributes: ["@default(true)"]
+        description: "Whether new movements may reference this class"
+
+      metadata:
+        type: Metadata
+        attributes: ["@audit_metadata"]
+        description: "Audit metadata (created_at, updated_at, deleted_at, created_by, updated_by, deleted_by)"
+
+    indexes:
+      - type: unique
+        fields: [company_id, code]
+        where: "deleted_at IS NULL"
+
+  - name: Shareholder
+    collection: shareholders
+    description: "A holder of shares (a logical reference to a party)"
+
+    fields:
+      id:
+        type: uuid
+        attributes: ["@id", "@default(uuid)"]
+        description: "Unique shareholder identifier"
+
+      company_id:
+        type: uuid
+        attributes: ["@required", "@exclude_from_foreign_key_check"]
+        description: "Books owner # logical FK to organization.Company.id"
+
+      party_id:
+        type: uuid?
+        attributes: ["@exclude_from_foreign_key_check"]
+        description: "The holder's party identity # logical FK to party.Party.id (null = an unlinked holder)"
+
+      name:
+        type: string
+        attributes: ["@required", "@max(150)"]
+        description: "Holder name (snapshot for the register)"
+
+      holder_type:
+        type: HolderType
+        attributes: ["@default(individual)"]
+        description: "Individual or entity holder"
+
+      metadata:
+        type: Metadata
+        attributes: ["@audit_metadata"]
+        description: "Audit metadata (created_at, updated_at, deleted_at, created_by, updated_by, deleted_by)"
+
+    indexes:
+      - type: index
+        fields: [company_id]
+
+enums:
+  - name: HolderType
+    description: "The nature of a shareholder"
+    variants:
+      - name: individual
+        description: "A natural person"
+        default: true
+      - name: entity
+        description: "A company / institution"

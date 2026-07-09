@@ -1,0 +1,90 @@
+# =============================================================================
+# Domain: Equity
+# Entity: Dividend
+# Description: A declared distribution to a share class. Declaration books the
+# liability (Dr Retained Earnings · Cr Dividend Payable); payment settles it
+# (Dr Dividend Payable · Cr Bank). The two legs let a declared-but-unpaid
+# dividend sit as a real payable until cash goes out — the exit the completeness
+# council makes reachable.
+# =============================================================================
+
+models:
+  - name: Dividend
+    collection: dividends
+    description: "A declared dividend on a share class (declared → paid)"
+
+    fields:
+      id:
+        type: uuid
+        attributes: ["@id", "@default(uuid)"]
+        description: "Unique dividend identifier"
+
+      company_id:
+        type: uuid
+        attributes: ["@required", "@exclude_from_foreign_key_check"]
+        description: "Books owner # logical FK to organization.Company.id"
+
+      share_class_id:
+        type: uuid
+        attributes: ["@required", "@foreign_key(ShareClass.id)"]
+        description: "The class the dividend is declared on"
+
+      declaration_date:
+        type: date
+        attributes: ["@required"]
+        description: "Date the dividend was declared (the liability's posting date)"
+
+      payment_date:
+        type: date?
+        description: "Date the dividend was paid (set when settled)"
+
+      per_share_amount:
+        type: decimal
+        attributes: ["@required", "@precision(20,4)", "@non_negative"]
+        description: "Cash per share declared"
+
+      shares_outstanding:
+        type: decimal
+        attributes: ["@required", "@precision(20,4)", "@non_negative"]
+        description: "Shares the dividend was computed on (snapshotted at declaration)"
+
+      total_amount:
+        type: decimal
+        attributes: ["@required", "@precision(20,4)", "@non_negative"]
+        description: "per_share_amount × shares_outstanding (the declared liability)"
+
+      status:
+        type: DividendStatus
+        attributes: ["@default(declared)"]
+        description: "declared (payable booked) → paid (cash out)"
+
+      retained_earnings_account_id:
+        type: uuid
+        attributes: ["@required", "@exclude_from_foreign_key_check"]
+        description: "Equity account debited on declaration # logical FK to accounting.Account.id"
+
+      dividend_payable_account_id:
+        type: uuid
+        attributes: ["@required", "@exclude_from_foreign_key_check"]
+        description: "Liability account credited on declaration, debited on payment # logical FK to accounting.Account.id"
+
+      metadata:
+        type: Metadata
+        attributes: ["@audit_metadata"]
+        description: "Audit metadata (created_at, updated_at, deleted_at, created_by, updated_by, deleted_by)"
+
+    indexes:
+      - type: index
+        fields: [company_id, share_class_id]
+      - type: index
+        fields: [status]
+
+enums:
+  - name: DividendStatus
+    description: "Lifecycle of a declared dividend"
+    variants:
+      - name: declared
+        description: "Liability booked (Dr Retained Earnings · Cr Dividend Payable)"
+        default: true
+      - name: paid
+        description: "Settled (Dr Dividend Payable · Cr Bank)"

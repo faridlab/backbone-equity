@@ -1,0 +1,112 @@
+# =============================================================================
+# Domain: Equity
+# Entity: ShareTransaction
+# Description: One movement in the share register. A holder's position in a class
+# is the SIGNED sum of its movements: issue/transfer_in add, buyback/transfer_out
+# remove. The register invariant is that a position never goes negative — you
+# cannot transfer or buy back more shares than a holder holds. Issue and buyback
+# post to the GL (capital moves cash); a transfer between holders posts NO GL.
+# =============================================================================
+
+models:
+  - name: ShareTransaction
+    collection: share_transactions
+    description: "A movement in the share register (issue / transfer / buyback)"
+
+    fields:
+      id:
+        type: uuid
+        attributes: ["@id", "@default(uuid)"]
+        description: "Unique transaction identifier"
+
+      company_id:
+        type: uuid
+        attributes: ["@required", "@exclude_from_foreign_key_check"]
+        description: "Books owner # logical FK to organization.Company.id"
+
+      share_class_id:
+        type: uuid
+        attributes: ["@required", "@foreign_key(ShareClass.id)"]
+        description: "The class of shares moved"
+
+      shareholder_id:
+        type: uuid
+        attributes: ["@required", "@foreign_key(Shareholder.id)"]
+        description: "The holder this movement affects (gains or loses shares)"
+
+      txn_type:
+        type: ShareTxnType
+        attributes: ["@required"]
+        description: "issue | transfer_in | transfer_out | buyback — determines the sign + GL"
+
+      quantity:
+        type: decimal
+        attributes: ["@required", "@precision(20,4)", "@non_negative"]
+        description: "Number of shares (always positive; the sign is implied by txn_type)"
+
+      price_per_share:
+        type: decimal
+        attributes: ["@required", "@precision(20,4)", "@non_negative"]
+        description: "Cash price per share (>= par for an issue; 0 for a transfer)"
+
+      amount:
+        type: decimal
+        attributes: ["@required", "@precision(20,4)", "@non_negative"]
+        description: "quantity × price_per_share (the cash leg for issue/buyback)"
+
+      counterparty_shareholder_id:
+        type: uuid?
+        attributes: ["@foreign_key(Shareholder.id)"]
+        description: "The other holder on a transfer (the transfer_in/out pair links here)"
+
+      transfer_group_id:
+        type: uuid?
+        attributes: ["@exclude_from_foreign_key_check"]
+        description: "Groups the two rows of a transfer (transfer_out + transfer_in share this id)"
+
+      posting_reference:
+        type: string?
+        attributes: ["@max(80)"]
+        description: "External voucher reference (audit)"
+
+      txn_date:
+        type: date
+        attributes: ["@required"]
+        description: "Effective date of the movement"
+
+      gl_posted:
+        type: bool
+        attributes: ["@default(false)"]
+        description: "Whether this movement has posted its GL journal (issue/buyback only)"
+
+      metadata:
+        type: Metadata
+        attributes: ["@audit_metadata"]
+        description: "Audit metadata (created_at, updated_at, deleted_at, created_by, updated_by, deleted_by)"
+
+    relations:
+      share_class:
+        type: ShareClass
+        attributes: ["@one", "@foreign_key(share_class_id)"]
+        description: "The class moved"
+        inverse: transactions
+
+    indexes:
+      - type: index
+        fields: [company_id, share_class_id, shareholder_id]
+      - type: index
+        fields: [transfer_group_id]
+
+enums:
+  - name: ShareTxnType
+    description: "The kind of register movement"
+    variants:
+      - name: issue
+        description: "The company issues new shares to a holder (+ shares; Dr Bank · Cr Capital · Cr Premium)"
+        default: true
+      - name: transfer_in
+        description: "A holder receives shares from another holder (+ shares; no GL)"
+      - name: transfer_out
+        description: "A holder gives shares to another holder (- shares; no GL)"
+      - name: buyback
+        description: "The company buys shares back from a holder (- shares; Dr Capital · Cr Bank)"
