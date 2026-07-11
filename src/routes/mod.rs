@@ -12,9 +12,13 @@ use std::sync::Arc;
 // Import handlers
 use crate::presentation::http::{
     create_dividend_routes,
+    create_dividend_read_routes,
     create_share_class_routes,
+    create_share_class_read_routes,
     create_shareholder_routes,
-    create_share_transaction_routes
+    create_shareholder_read_routes,
+    create_share_transaction_routes,
+    create_share_transaction_read_routes
 };
 
 // Import AppState for stateful routes
@@ -42,6 +46,19 @@ pub fn create_stateless_routes(module: &crate::EquityModule) -> Router<()> {
         .merge(create_share_class_routes(module.share_class_service.clone()))
         .merge(create_shareholder_routes(module.shareholder_service.clone()))
         .merge(create_share_transaction_routes(module.share_transaction_service.clone()))
+}
+
+/// Read-only routes for the Equity module — every entity mounted READ-ONLY (the guarded base).
+///
+/// The generic `create_stateless_routes` exposes full mutable CRUD with no domain
+/// validation; this exposes only reads, so generic mutation can't bypass a write
+/// service's invariants. Extend it: `create_readonly_equity_routes(m).merge(my_validated_writes)`.
+pub fn create_readonly_equity_routes(module: &crate::EquityModule) -> Router<()> {
+    Router::new()
+        .merge(create_dividend_read_routes(module.dividend_service.clone()))
+        .merge(create_share_class_read_routes(module.share_class_service.clone()))
+        .merge(create_shareholder_read_routes(module.shareholder_service.clone()))
+        .merge(create_share_transaction_read_routes(module.share_transaction_service.clone()))
 }
 
 /// Get all routes (stateless) for the Equity module.
