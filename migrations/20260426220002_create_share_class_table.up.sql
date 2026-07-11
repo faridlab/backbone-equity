@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS equity.share_classes (
     company_id UUID NOT NULL,
     code TEXT NOT NULL,
     name TEXT NOT NULL,
-    par_value NUMERIC NOT NULL,
+    par_value NUMERIC(20, 4) NOT NULL CHECK (par_value >= 0),
     currency TEXT NOT NULL,
     share_capital_account_id UUID NOT NULL,
     share_premium_account_id UUID NOT NULL,
