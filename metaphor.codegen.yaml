@@ -15,6 +15,14 @@ user_owned:
   - "src/application/service/equity_gl.rs"
   - "src/application/service/equity_events.rs"
   - "src/application/service/equity_write_service.rs"
+  # Own the hand-written equity SQL (the register's movement inserts + position lock + both
+  # aggregation rules, the class/holder registrations, the dividend declaration + its CAS settlement
+  # claim) that the write service orchestrates. Declared here — not renamed with a `_custom` suffix —
+  # so the generator skips them wholesale; this declaration is what makes editing them legitimate.
+  - "src/infrastructure/persistence/dividend_repository.rs"
+  - "src/infrastructure/persistence/share_class_repository.rs"
+  - "src/infrastructure/persistence/shareholder_repository.rs"
+  - "src/infrastructure/persistence/share_transaction_repository.rs"
   - "src/presentation/http/guarded_routes.rs"
 
   # Behavior tests (the golden cases / oracle) + BDD features.

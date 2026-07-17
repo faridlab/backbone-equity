@@ -28,4 +28,12 @@ pub use backbone_orm::repository::{
 
 // Re-export custom persistence types
 // <<< CUSTOM
+// The hand-written equity SQL's parameter/projection types. Every repository listed here is declared
+// `user_owned` in metaphor.codegen.yaml — see the write service, which orchestrates them.
+pub use dividend_repository::{DividendBasisRow, DividendPaymentRow, NewDividendRow};
+pub use share_class_repository::{NewShareClassRow, ShareClassDetailRow};
+pub use shareholder_repository::NewShareholderRow;
+pub use share_transaction_repository::{
+    HoldingRow, NewBuybackTxnRow, NewIssueTxnRow, NewTransferLegRow,
+};
 // END CUSTOM

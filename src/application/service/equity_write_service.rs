@@ -12,8 +12,14 @@
 use backbone_orm::company_scope;
 use chrono::{NaiveDate, Utc};
 use rust_decimal::Decimal;
-use sqlx::{PgPool, Row};
+use sqlx::PgPool;
 use uuid::Uuid;
+
+use crate::infrastructure::persistence::{
+    DividendRepository, NewBuybackTxnRow, NewDividendRow, NewIssueTxnRow, NewShareClassRow,
+    NewShareholderRow, NewTransferLegRow, ShareClassRepository, ShareTransactionRepository,
+    ShareholderRepository,
+};
 
 use super::equity_events::*;
 use super::equity_gl::*;
@@ -116,11 +122,19 @@ pub struct Allocation {
 
 pub struct EquityWriteService {
     pool: PgPool,
+    share_classes: ShareClassRepository,
+    shareholders: ShareholderRepository,
+    transactions: ShareTransactionRepository,
+    dividends: DividendRepository,
 }
 
 impl EquityWriteService {
     pub fn new(pool: PgPool) -> Self {
-        Self { pool }
+        let share_classes = ShareClassRepository::new(pool.clone());
+        let shareholders = ShareholderRepository::new(pool.clone());
+        let transactions = ShareTransactionRepository::new(pool.clone());
+        let dividends = DividendRepository::new(pool.clone());
+        Self { pool, share_classes, shareholders, transactions, dividends }
     }
 
     pub async fn register_share_class(&self, c: NewShareClass) -> Result<Uuid, EquityError> {
@@ -130,17 +144,18 @@ impl EquityWriteService {
         let id = Uuid::new_v4();
         // RLS scope (ADR-0008): the company is on the DTO — bind it for the insert so it runs with
         // `app.company_id` set (a bare-pool insert is rejected by the fence's WITH CHECK).
-        let class_q = sqlx::query(
-            r#"INSERT INTO equity.share_classes
-                 (id, company_id, code, name, par_value, currency, share_capital_account_id,
-                  share_premium_account_id, is_active)
-               VALUES ($1,$2,$3,$4,$5,$6,$7,$8,true)"#,
-        )
-        .bind(id).bind(c.company_id).bind(&c.code).bind(&c.name).bind(c.par_value).bind(&c.currency)
-        .bind(c.share_capital_account_id).bind(c.share_premium_account_id);
         company_scope::with_company_scope(
             Some(c.company_id),
-            company_scope::execute_scoped(&self.pool, class_q),
+            self.share_classes.insert_share_class(&self.pool, &NewShareClassRow {
+                id,
+                company_id: c.company_id,
+                code: &c.code,
+                name: &c.name,
+                par_value: c.par_value,
+                currency: &c.currency,
+                share_capital_account_id: c.share_capital_account_id,
+                share_premium_account_id: c.share_premium_account_id,
+            }),
         )
         .await?;
         Ok(id)
@@ -149,14 +164,15 @@ impl EquityWriteService {
     pub async fn register_shareholder(&self, s: NewShareholder) -> Result<Uuid, EquityError> {
         let id = Uuid::new_v4();
         // RLS scope (ADR-0008): company on the DTO — see `register_share_class`.
-        let holder_q = sqlx::query(
-            r#"INSERT INTO equity.shareholders (id, company_id, party_id, name, holder_type)
-               VALUES ($1,$2,$3,$4,$5::holder_type)"#,
-        )
-        .bind(id).bind(s.company_id).bind(s.party_id).bind(&s.name).bind(&s.holder_type);
         company_scope::with_company_scope(
             Some(s.company_id),
-            company_scope::execute_scoped(&self.pool, holder_q),
+            self.shareholders.insert_shareholder(&self.pool, &NewShareholderRow {
+                id,
+                company_id: s.company_id,
+                party_id: s.party_id,
+                name: &s.name,
+                holder_type: &s.holder_type,
+            }),
         )
         .await?;
         Ok(id)
@@ -196,15 +212,17 @@ impl EquityWriteService {
         // register movement and its outbox stage are fenced for request and job callers alike.
         let mut tx = self.pool.begin().await?;
         company_scope::bind_company_on(&mut tx, i.company_id).await?;
-        sqlx::query(
-            r#"INSERT INTO equity.share_transactions
-                 (id, company_id, share_class_id, shareholder_id, txn_type, quantity, price_per_share, amount,
-                  posting_reference, txn_date, gl_posted)
-               VALUES ($1,$2,$3,$4,'issue'::share_txn_type,$5,$6,$7,$8,$9,true)"#,
-        )
-        .bind(txn_id).bind(i.company_id).bind(i.share_class_id).bind(i.shareholder_id)
-        .bind(i.quantity).bind(i.price_per_share).bind(amount).bind(&i.reference).bind(i.txn_date)
-        .execute(&mut *tx).await?;
+        self.transactions.insert_issue(&mut tx, &NewIssueTxnRow {
+            id: txn_id,
+            company_id: i.company_id,
+            share_class_id: i.share_class_id,
+            shareholder_id: i.shareholder_id,
+            quantity: i.quantity,
+            price_per_share: i.price_per_share,
+            amount,
+            posting_reference: i.reference.as_deref(),
+            txn_date: i.txn_date,
+        }).await?;
 
         let event = EquityEvent::SharesIssued {
             transaction_id: txn_id, company_id: i.company_id, share_class_id: i.share_class_id,
@@ -231,8 +249,8 @@ impl EquityWriteService {
         company_scope::bind_company_on(&mut tx, t.company_id).await?;
         // Serialize concurrent removals from this (class, holder): the holding is a SUM with no single row to
         // lock, so an advisory xact lock is the guard.
-        lock_position(&mut tx, t.company_id, t.share_class_id, t.from_shareholder_id).await?;
-        let held = holding(&mut tx, t.company_id, t.share_class_id, t.from_shareholder_id).await?;
+        self.transactions.lock_position(&mut tx, t.company_id, t.share_class_id, t.from_shareholder_id).await?;
+        let held = self.transactions.holding(&mut tx, t.company_id, t.share_class_id, t.from_shareholder_id).await?;
         if t.quantity > held {
             return Err(EquityError::InsufficientShares { held, requested: t.quantity });
         }
@@ -241,15 +259,17 @@ impl EquityWriteService {
             (t.from_shareholder_id, "transfer_out", t.to_shareholder_id),
             (t.to_shareholder_id, "transfer_in", t.from_shareholder_id),
         ] {
-            sqlx::query(
-                r#"INSERT INTO equity.share_transactions
-                     (id, company_id, share_class_id, shareholder_id, txn_type, quantity, price_per_share,
-                      amount, counterparty_shareholder_id, transfer_group_id, txn_date, gl_posted)
-                   VALUES ($1,$2,$3,$4,$5::share_txn_type,$6,0,0,$7,$8,$9,false)"#,
-            )
-            .bind(Uuid::new_v4()).bind(t.company_id).bind(t.share_class_id).bind(holder).bind(ttype)
-            .bind(t.quantity).bind(cp).bind(group).bind(t.txn_date)
-            .execute(&mut *tx).await?;
+            self.transactions.insert_transfer_leg(&mut tx, &NewTransferLegRow {
+                id: Uuid::new_v4(),
+                company_id: t.company_id,
+                share_class_id: t.share_class_id,
+                shareholder_id: holder,
+                txn_type: ttype,
+                quantity: t.quantity,
+                counterparty_shareholder_id: cp,
+                transfer_group_id: group,
+                txn_date: t.txn_date,
+            }).await?;
         }
         tx.commit().await?;
         Ok(group)
@@ -275,20 +295,21 @@ impl EquityWriteService {
         // RLS scope (ADR-0008): company on the DTO — bind it before the holding read (see `transfer_shares`).
         let mut tx = self.pool.begin().await?;
         company_scope::bind_company_on(&mut tx, b.company_id).await?;
-        lock_position(&mut tx, b.company_id, b.share_class_id, b.shareholder_id).await?;
-        let held = holding(&mut tx, b.company_id, b.share_class_id, b.shareholder_id).await?;
+        self.transactions.lock_position(&mut tx, b.company_id, b.share_class_id, b.shareholder_id).await?;
+        let held = self.transactions.holding(&mut tx, b.company_id, b.share_class_id, b.shareholder_id).await?;
         if b.quantity > held {
             return Err(EquityError::InsufficientShares { held, requested: b.quantity });
         }
-        sqlx::query(
-            r#"INSERT INTO equity.share_transactions
-                 (id, company_id, share_class_id, shareholder_id, txn_type, quantity, price_per_share, amount,
-                  txn_date, gl_posted)
-               VALUES ($1,$2,$3,$4,'buyback'::share_txn_type,$5,$6,$7,$8,true)"#,
-        )
-        .bind(txn_id).bind(b.company_id).bind(b.share_class_id).bind(b.shareholder_id)
-        .bind(b.quantity).bind(b.price_per_share).bind(amount).bind(b.txn_date)
-        .execute(&mut *tx).await?;
+        self.transactions.insert_buyback(&mut tx, &NewBuybackTxnRow {
+            id: txn_id,
+            company_id: b.company_id,
+            share_class_id: b.share_class_id,
+            shareholder_id: b.shareholder_id,
+            quantity: b.quantity,
+            price_per_share: b.price_per_share,
+            amount,
+            txn_date: b.txn_date,
+        }).await?;
 
         // Post while still holding the lock (the register move + its journal commit together).
         let mut lines = vec![GlPostLine::debit(class.share_capital_account_id, capital).with_description("Share capital retired")];
@@ -323,7 +344,7 @@ impl EquityWriteService {
         if d.per_share_amount <= Decimal::ZERO {
             return Err(EquityError::Invalid("per-share amount must be positive".into()));
         }
-        let outstanding = shares_outstanding(&self.pool, d.company_id, d.share_class_id).await?;
+        let outstanding = shares_outstanding(&self.transactions, &self.pool, d.company_id, d.share_class_id).await?;
         if outstanding <= Decimal::ZERO {
             return Err(EquityError::InvalidState("no shares outstanding to pay a dividend on"));
         }
@@ -339,16 +360,17 @@ impl EquityWriteService {
         // RLS scope (ADR-0008): company on the DTO — bind it explicitly onto our own tx.
         let mut tx = self.pool.begin().await?;
         company_scope::bind_company_on(&mut tx, d.company_id).await?;
-        sqlx::query(
-            r#"INSERT INTO equity.dividends
-                 (id, company_id, share_class_id, declaration_date, per_share_amount, shares_outstanding,
-                  total_amount, status, retained_earnings_account_id, dividend_payable_account_id)
-               VALUES ($1,$2,$3,$4,$5,$6,$7,'declared'::dividend_status,$8,$9)"#,
-        )
-        .bind(div_id).bind(d.company_id).bind(d.share_class_id).bind(d.declaration_date)
-        .bind(d.per_share_amount).bind(outstanding).bind(total)
-        .bind(d.retained_earnings_account_id).bind(d.dividend_payable_account_id)
-        .execute(&mut *tx).await?;
+        self.dividends.insert_dividend(&mut tx, &NewDividendRow {
+            id: div_id,
+            company_id: d.company_id,
+            share_class_id: d.share_class_id,
+            declaration_date: d.declaration_date,
+            per_share_amount: d.per_share_amount,
+            shares_outstanding: outstanding,
+            total_amount: total,
+            retained_earnings_account_id: d.retained_earnings_account_id,
+            dividend_payable_account_id: d.dividend_payable_account_id,
+        }).await?;
 
         let event = EquityEvent::DividendDeclared {
             dividend_id: div_id, company_id: d.company_id, share_class_id: d.share_class_id, total_amount: total,
@@ -374,33 +396,20 @@ impl EquityWriteService {
         // argument. The read rides the request-dedicated connection (which carries the caller's
         // `app.company_id`), so another company's dividend is simply not found. The company read off
         // this row is then bound explicitly onto the settlement tx below.
-        let row = company_scope::fetch_optional_row_scoped(
-            &self.pool,
-            sqlx::query(
-                r#"SELECT company_id, total_amount, status::text AS status, dividend_payable_account_id
-                   FROM equity.dividends WHERE id=$1 AND (metadata->>'deleted_at') IS NULL"#,
-            )
-            .bind(dividend_id),
-        )
-        .await?
-        .ok_or(EquityError::NotFound("dividend"))?;
-        let status: String = row.get("status");
-        if status == "paid" {
+        let row = self.dividends.fetch_for_payment(&self.pool, dividend_id).await?
+            .ok_or(EquityError::NotFound("dividend"))?;
+        if row.status == "paid" {
             return Err(EquityError::InvalidState("dividend already paid"));
         }
-        let company_id: Uuid = row.get("company_id");
-        let total: Decimal = row.get("total_amount");
-        let payable_acct: Uuid = row.get("dividend_payable_account_id");
+        let company_id = row.company_id;
+        let total = row.total_amount;
+        let payable_acct = row.dividend_payable_account_id;
 
         // Claim the settlement first (CAS declared→paid), so a concurrent pay can't double-remit.
         let mut tx = self.pool.begin().await?;
         company_scope::bind_company_on(&mut tx, company_id).await?;
-        let claimed = sqlx::query(
-            r#"UPDATE equity.dividends SET status='paid'::dividend_status, payment_date=$2
-               WHERE id=$1 AND status='declared'::dividend_status"#,
-        )
-        .bind(dividend_id).bind(payment_date).execute(&mut *tx).await?;
-        if claimed.rows_affected() != 1 {
+        let claimed = self.dividends.claim_payment(&mut tx, dividend_id, payment_date).await?;
+        if claimed != 1 {
             tx.rollback().await?;
             return Err(EquityError::InvalidState("dividend already paid"));
         }
@@ -431,33 +440,23 @@ impl EquityWriteService {
 
     /// Shares outstanding for a class = Σ issued − Σ bought back.
     pub async fn class_shares_outstanding(&self, company_id: Uuid, class_id: Uuid) -> Result<Decimal, EquityError> {
-        shares_outstanding(&self.pool, company_id, class_id).await
+        shares_outstanding(&self.transactions, &self.pool, company_id, class_id).await
     }
 
     /// Every holder's position in a class + its ownership percentage of shares outstanding.
     pub async fn holdings(&self, company_id: Uuid, class_id: Uuid) -> Result<Vec<Holding>, EquityError> {
         // RLS scope (ADR-0008): read-only, company on the parameter — bind it so the cap-table read is
         // fenced (and returns rows) for request and non-request callers alike.
-        let holdings_q = sqlx::query(
-            r#"SELECT shareholder_id,
-                      COALESCE(SUM(CASE WHEN txn_type IN ('issue','transfer_in') THEN quantity ELSE -quantity END),0) AS qty
-               FROM equity.share_transactions
-               WHERE company_id=$1 AND share_class_id=$2 AND (metadata->>'deleted_at') IS NULL
-               GROUP BY shareholder_id HAVING
-                 COALESCE(SUM(CASE WHEN txn_type IN ('issue','transfer_in') THEN quantity ELSE -quantity END),0) <> 0
-               ORDER BY qty DESC"#,
-        )
-        .bind(company_id).bind(class_id);
         let rows = company_scope::with_company_scope(
             Some(company_id),
-            company_scope::fetch_all_rows_scoped(&self.pool, holdings_q),
+            self.transactions.holdings(&self.pool, company_id, class_id),
         )
         .await?;
-        let outstanding = shares_outstanding(&self.pool, company_id, class_id).await?;
-        Ok(rows.iter().map(|r| {
-            let quantity: Decimal = r.get("qty");
+        let outstanding = shares_outstanding(&self.transactions, &self.pool, company_id, class_id).await?;
+        Ok(rows.into_iter().map(|r| {
+            let quantity = r.quantity;
             let pct = if outstanding > Decimal::ZERO { quantity / outstanding * Decimal::from(100) } else { Decimal::ZERO };
-            Holding { shareholder_id: r.get("shareholder_id"), quantity, ownership_pct: pct }
+            Holding { shareholder_id: r.shareholder_id, quantity, ownership_pct: pct }
         }).collect())
     }
 
@@ -467,19 +466,11 @@ impl EquityWriteService {
     pub async fn dividend_allocations(&self, dividend_id: Uuid) -> Result<Vec<Allocation>, EquityError> {
         // RLS scope (ADR-0008), ID-only pattern — see `pay_dividend`. The company read off this row then
         // scopes the `holdings` call below.
-        let d = company_scope::fetch_optional_row_scoped(
-            &self.pool,
-            sqlx::query(
-                r#"SELECT company_id, share_class_id, per_share_amount
-                   FROM equity.dividends WHERE id=$1 AND (metadata->>'deleted_at') IS NULL"#,
-            )
-            .bind(dividend_id),
-        )
-        .await?
-        .ok_or(EquityError::NotFound("dividend"))?;
-        let company_id: Uuid = d.get("company_id");
-        let class_id: Uuid = d.get("share_class_id");
-        let per_share: Decimal = d.get("per_share_amount");
+        let d = self.dividends.fetch_allocation_basis(&self.pool, dividend_id).await?
+            .ok_or(EquityError::NotFound("dividend"))?;
+        let company_id = d.company_id;
+        let class_id = d.share_class_id;
+        let per_share = d.per_share_amount;
         let holdings = self.holdings(company_id, class_id).await?;
         Ok(holdings.into_iter()
             .filter(|h| h.quantity > Decimal::ZERO)
@@ -495,23 +486,15 @@ impl EquityWriteService {
         // therefore rides the ambient scope: under HTTP the request-dedicated connection carries the
         // caller's `app.company_id`, so another company's class is simply not found. A non-request
         // caller (job, event subscriber) MUST wrap in `with_company_scope(Some(company_id))`.
-        let r = company_scope::fetch_optional_row_scoped(
-            &self.pool,
-            sqlx::query(
-                r#"SELECT par_value, currency, share_capital_account_id, share_premium_account_id, is_active
-                   FROM equity.share_classes WHERE id=$1 AND (metadata->>'deleted_at') IS NULL"#,
-            )
-            .bind(id),
-        )
-        .await?
-        .ok_or(EquityError::NotFound("share_class"))?;
-        if !r.get::<bool, _>("is_active") {
+        let r = self.share_classes.fetch_class(&self.pool, id).await?
+            .ok_or(EquityError::NotFound("share_class"))?;
+        if !r.is_active {
             return Err(EquityError::InvalidState("share class is inactive"));
         }
         Ok(ShareClassRow {
-            par_value: r.get("par_value"),
-            share_capital_account_id: r.get("share_capital_account_id"),
-            share_premium_account_id: r.get("share_premium_account_id"),
+            par_value: r.par_value,
+            share_capital_account_id: r.share_capital_account_id,
+            share_premium_account_id: r.share_premium_account_id,
         })
     }
 
@@ -549,51 +532,21 @@ struct ShareClassRow {
     share_premium_account_id: Uuid,
 }
 
-/// A per-(company, class, holder) advisory xact lock — serializes concurrent removals so the holding check
-/// and the insert are atomic against another remover.
-async fn lock_position(
-    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
-    company_id: Uuid,
-    class_id: Uuid,
-    holder_id: Uuid,
-) -> Result<(), EquityError> {
-    sqlx::query("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))")
-        .bind(format!("{company_id}:{class_id}:{holder_id}"))
-        .execute(&mut **tx).await?;
-    Ok(())
-}
-
-/// The holder's current position in a class = Σ (issue/transfer_in) − Σ (buyback/transfer_out).
-async fn holding(
-    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
-    company_id: Uuid,
-    class_id: Uuid,
-    holder_id: Uuid,
-) -> Result<Decimal, EquityError> {
-    let h: Decimal = sqlx::query_scalar(
-        r#"SELECT COALESCE(SUM(CASE WHEN txn_type IN ('issue','transfer_in') THEN quantity ELSE -quantity END),0)
-           FROM equity.share_transactions
-           WHERE company_id=$1 AND share_class_id=$2 AND shareholder_id=$3 AND (metadata->>'deleted_at') IS NULL"#,
-    )
-    .bind(company_id).bind(class_id).bind(holder_id).fetch_one(&mut **tx).await?;
-    Ok(h)
-}
-
 /// Shares outstanding for a class = Σ issued − Σ bought back (transfers net to zero across holders).
-async fn shares_outstanding(pool: &PgPool, company_id: Uuid, class_id: Uuid) -> Result<Decimal, EquityError> {
-    // RLS scope (ADR-0008): a bare-pool read here returns 0 through the fence — which would read as a
-    // real "no shares outstanding" and wrongly refuse every dividend. The company is on the parameter,
-    // so bind it explicitly: correct for request and non-request (job) callers alike.
-    let outstanding_q = sqlx::query_scalar(
-        r#"SELECT COALESCE(SUM(CASE WHEN txn_type='issue' THEN quantity
-                                    WHEN txn_type='buyback' THEN -quantity ELSE 0 END),0)
-           FROM equity.share_transactions
-           WHERE company_id=$1 AND share_class_id=$2 AND (metadata->>'deleted_at') IS NULL"#,
-    )
-    .bind(company_id).bind(class_id);
-    let s: Decimal = company_scope::with_company_scope(
+///
+/// Stays a free function (the SQL now lives in `ShareTransactionRepository`, but the SCOPE WRAPPER
+/// belongs to this layer): a bare-pool read here returns 0 through the fence — which would read as a
+/// real "no shares outstanding" and wrongly refuse every dividend. The company is on the parameter,
+/// so bind it explicitly: correct for request and non-request (job) callers alike.
+async fn shares_outstanding(
+    transactions: &ShareTransactionRepository,
+    pool: &PgPool,
+    company_id: Uuid,
+    class_id: Uuid,
+) -> Result<Decimal, EquityError> {
+    let s = company_scope::with_company_scope(
         Some(company_id),
-        company_scope::fetch_one_scalar_scoped(pool, outstanding_q),
+        transactions.shares_outstanding(pool, company_id, class_id),
     )
     .await?;
     Ok(s)
