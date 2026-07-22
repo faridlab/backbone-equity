@@ -559,10 +559,16 @@ async fn stage(
     aggregate_id: Uuid,
     event: &EquityEvent,
 ) -> Result<(), EquityError> {
+    let payload = serde_json::to_value(event).map_err(|e| EquityError::Invalid(e.to_string()))?;
+    // Every EquityEvent carries company_id; extract it for the ADR-0011 outbox fence.
+    let company_id: Uuid = payload
+        .get("company_id")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| EquityError::Invalid("equity event missing company_id".into()))?
+        .parse()
+        .map_err(|e| EquityError::Invalid(format!("equity event company_id parse: {e}")))?;
     let record = backbone_outbox::OutboxRecord::new(
-        event_type, aggregate_type, aggregate_id.to_string(),
-        serde_json::to_value(event).map_err(|e| EquityError::Invalid(e.to_string()))?,
-        Utc::now(),
+        event_type, aggregate_type, aggregate_id.to_string(), company_id, payload, Utc::now(),
     );
     backbone_outbox::outbox::stage(&mut **tx, "equity", &record)
         .await.map_err(|e| EquityError::Invalid(format!("outbox stage: {e}")))?;
