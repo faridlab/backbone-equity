@@ -36,7 +36,7 @@ rust_decimal = { version = "1.36", features = ["serde"] }
 # Transactional outbox — equity's lifecycle events (SharesIssued / DividendDeclared / DividendPaid) are
 # staged in the same tx as the state change, so they survive a crash between commit and in-proc publish.
 # A framework crate, not a horizontal module edge.
-backbone-outbox = { path = "../backbone-framework/backbone-outbox" }
+backbone-outbox = { git = "https://github.com/faridlab/backbone-framework", tag = "v2.7.4", features = ["multi_tenant"] }
 
 # Database (PostgreSQL primary)
 sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "postgres", "uuid", "chrono", "json", "migrate", "rust_decimal"] }
