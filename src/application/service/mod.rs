@@ -16,6 +16,15 @@ pub mod share_transaction_service;
 pub mod equity_gl;
 pub mod equity_events;
 pub mod equity_write_service;
+// The write surface, chunked out of equity_write_service.rs. Each is an `impl EquityWriteService` block
+// over the vocabulary that stays in `equity_write_service` (so the
+// `equity_write_service::{IssueShares, ...}` import paths are unchanged).
+pub mod equity_register;
+pub mod equity_issue;
+pub mod equity_transfer;
+pub mod equity_buyback;
+pub mod equity_dividend;
+pub mod equity_read;
 // END CUSTOM
 
 pub use dividend_service::DividendService;

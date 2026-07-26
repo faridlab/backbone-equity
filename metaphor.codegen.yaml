@@ -15,6 +15,14 @@ user_owned:
   - "src/application/service/equity_gl.rs"
   - "src/application/service/equity_events.rs"
   - "src/application/service/equity_write_service.rs"
+  # The write surface, chunked out of equity_write_service.rs. Each is an `impl EquityWriteService`
+  # block; the shared vocabulary (input structs, outcomes, errors) stays in equity_write_service.rs.
+  - "src/application/service/equity_register.rs"
+  - "src/application/service/equity_issue.rs"
+  - "src/application/service/equity_transfer.rs"
+  - "src/application/service/equity_buyback.rs"
+  - "src/application/service/equity_dividend.rs"
+  - "src/application/service/equity_read.rs"
   # Own the hand-written equity SQL (the register's movement inserts + position lock + both
   # aggregation rules, the class/holder registrations, the dividend declaration + its CAS settlement
   # claim) that the write service orchestrates. Declared here — not renamed with a `_custom` suffix —
