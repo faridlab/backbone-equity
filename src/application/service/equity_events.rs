@@ -32,6 +32,20 @@ pub enum EquityEvent {
     },
 }
 
+impl EquityEvent {
+    /// Every variant carries the tenant the event belongs to. Extracted BEFORE serialization because
+    /// serde wraps an enum as `{"VariantName": { ... }}` — a top-level `payload.get("company_id")` on
+    /// the serialized value returns `None` (the top-level keys are variant names, not fields), which
+    /// would make every equity outbox stage fail the ADR-0011 fence. Typed access has no such hazard.
+    pub fn company_id(&self) -> Uuid {
+        match self {
+            Self::SharesIssued { company_id, .. }
+            | Self::DividendDeclared { company_id, .. }
+            | Self::DividendPaid { company_id, .. } => *company_id,
+        }
+    }
+}
+
 /// Where equity publishes its lifecycle events (in-process). Durability is the outbox's job, not the sink's.
 pub trait EquityEventSink: Send + Sync {
     fn publish(&self, event: &EquityEvent);

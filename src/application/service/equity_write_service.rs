@@ -232,14 +232,11 @@ pub(super) async fn stage(
     aggregate_id: Uuid,
     event: &EquityEvent,
 ) -> Result<(), EquityError> {
+    // Extract company_id BEFORE serialization: serde wraps the enum as `{"Variant": {...}}`, so a
+    // post-serialize `payload.get("company_id")` returns None and every equity stage would fail the
+    // ADR-0011 fence. Typed access (see EquityEvent::company_id) has no such hazard.
+    let company_id: Uuid = event.company_id();
     let payload = serde_json::to_value(event).map_err(|e| EquityError::Invalid(e.to_string()))?;
-    // Every EquityEvent carries company_id; extract it for the ADR-0011 outbox fence.
-    let company_id: Uuid = payload
-        .get("company_id")
-        .and_then(|v| v.as_str())
-        .ok_or_else(|| EquityError::Invalid("equity event missing company_id".into()))?
-        .parse()
-        .map_err(|e| EquityError::Invalid(format!("equity event company_id parse: {e}")))?;
     let record = backbone_outbox::OutboxRecord::new(
         event_type, aggregate_type, aggregate_id.to_string(), company_id, payload, Utc::now(),
     );
