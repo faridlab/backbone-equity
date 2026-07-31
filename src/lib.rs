@@ -42,10 +42,6 @@ pub use application::service::ShareClassService;
 pub use application::service::ShareholderService;
 pub use application::service::ShareTransactionService;
 
-// Re-exports - Workflows (Example saga scaffolding; not a committed surface — opt in via the feature).
-#[cfg(feature = "unstable-write-service")]
-pub use application::workflows::*;
-
 use std::sync::Arc;
 use axum::Router;
 use sqlx::PgPool;
