@@ -229,6 +229,9 @@ impl backbone_orm::EntityRepoMeta for ShareClass {
     fn search_fields() -> &'static [&'static str] {
         &["code", "name", "currency"]
     }
+    fn company_field() -> Option<&'static str> {
+        Some("company_id")
+    }
 }
 
 /// Builder for ShareClass entity

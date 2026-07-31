@@ -276,6 +276,9 @@ impl backbone_orm::EntityRepoMeta for ShareTransaction {
     fn search_fields() -> &'static [&'static str] {
         &[]
     }
+    fn company_field() -> Option<&'static str> {
+        Some("company_id")
+    }
     fn relations() -> &'static [(&'static str, &'static str, &'static str)] {
         &[("shareClass", "share_classes", "shareClassId")]
     }
