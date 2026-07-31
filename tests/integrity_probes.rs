@@ -98,9 +98,13 @@ async fn eip4_lifecycle_event_durable() {
         retained_earnings_account_id: a.retained_earnings, dividend_payable_account_id: a.dividend_payable,
     }, &gl, &DroppingSink).await.unwrap();
 
-    let staged: i64 = sqlx::query_scalar(
-        "SELECT count(*) FROM equity.outbox_events WHERE aggregate_id=$1 AND event_type='DividendDeclared'")
-        .bind(div.id.to_string()).fetch_one(&pool).await.unwrap();
+    // The v2.7.4 RLS fence (20260731000100) hides outbox rows unless app.company_id is set, so read
+    // the table inside the company scope the producer wrote under.
+    let staged: i64 = backbone_orm::company_scope::with_company_scope(Some(company), async {
+        sqlx::query_scalar(
+            "SELECT count(*) FROM equity.outbox_events WHERE aggregate_id=$1 AND event_type='DividendDeclared'")
+            .bind(div.id.to_string()).fetch_one(&pool).await.unwrap()
+    }).await;
     assert_eq!(staged, 1, "DividendDeclared durably staged despite the dropped publish");
 }
 
