@@ -10,8 +10,6 @@
 //! remain gated behind the `unstable-write-service` feature; the crate's default public surface is
 //! generic CRUD, so do not assume "writes go through events" today.
 
-use std::sync::Arc;
-
 use anyhow::Result;
 use async_trait::async_trait;
 use uuid::Uuid;
@@ -68,21 +66,6 @@ pub trait EquityQueryService: Send + Sync {
     /// Check if ShareTransaction exists
     async fn share_transaction_exists(&self, id: ShareTransactionId) -> Result<bool>;
 
-}
-
-// ============================================================================
-// QUERY SERVICE IMPLEMENTATION
-// ============================================================================
-
-/// Default implementation of EquityQueryService
-pub struct EquityQueryServiceImpl<R> {
-    repository: Arc<R>,
-}
-
-impl<R> EquityQueryServiceImpl<R> {
-    pub fn new(repository: Arc<R>) -> Self {
-        Self { repository }
-    }
 }
 
 // ============================================================================
