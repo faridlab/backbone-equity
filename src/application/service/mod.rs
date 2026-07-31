@@ -32,7 +32,15 @@ pub use share_class_service::ShareClassService;
 pub use shareholder_service::ShareholderService;
 pub use share_transaction_service::ShareTransactionService;
 // <<< CUSTOM
+// The hand-authored cap-table write surface — NOT a committed contract. No in-workspace service composes
+// it yet (no `impl` of the read contract, no `EquityWriteService::new` outside tests). Reach it via the
+// deep path `application::service::equity_write_service::*` (as the tests do) or opt into the curated
+// re-exports below with the `unstable-write-service` feature. The crate's default public surface is
+// generic CRUD (see `lib.rs`).
+#[cfg(feature = "unstable-write-service")]
 pub use equity_write_service::{EquityWriteService, EquityError, NewShareClass, NewShareholder, IssueShares, TransferShares, BuybackShares, DeclareDividend, PostOutcome, Holding, Allocation};
+#[cfg(feature = "unstable-write-service")]
 pub use equity_events::{EquityEvent, EquityEventSink, LoggingSink};
+#[cfg(feature = "unstable-write-service")]
 pub use equity_gl::{AccountingPostEnvelope, GlPostLine, GlPostAck, GlPostRejected, GlPostSink};
 // END CUSTOM
