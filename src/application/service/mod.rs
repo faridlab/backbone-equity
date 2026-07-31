@@ -25,6 +25,9 @@ pub mod equity_transfer;
 pub mod equity_buyback;
 pub mod equity_dividend;
 pub mod equity_read;
+// In-tree reference impl of the read contract (gated; not a deployed service).
+#[cfg(feature = "unstable-write-service")]
+pub mod equity_query_service_impl;
 // END CUSTOM
 
 pub use dividend_service::DividendService;
@@ -43,4 +46,6 @@ pub use equity_write_service::{EquityWriteService, EquityError, NewShareClass, N
 pub use equity_events::{EquityEvent, EquityEventSink, LoggingSink};
 #[cfg(feature = "unstable-write-service")]
 pub use equity_gl::{AccountingPostEnvelope, GlPostLine, GlPostAck, GlPostRejected, GlPostSink};
+#[cfg(feature = "unstable-write-service")]
+pub use equity_query_service_impl::EquityQueryServiceImpl;
 // END CUSTOM

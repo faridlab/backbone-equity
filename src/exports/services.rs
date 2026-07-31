@@ -4,11 +4,11 @@
 //!
 //! Intended read-only contract for other modules.
 //!
-//! CAUTION — not yet a realized contract: `EquityQueryService` below is declared but NOT implemented
-//! in-tree, and the validated/event-sourced write surface (`EquityWriteService`) is un-composed (no
-//! service drives it). Both are gated behind the `unstable-write-service` feature; the crate's default
-//! public surface is generic CRUD. Do not assume "writes go through events" — today writes are generic
-//! CRUD rows unless a composing service mounts the guarded router.
+//! The read contract below is realized in-tree by `EquityQueryServiceImpl` (in `application::service`),
+//! with an end-to-end composition proof in `tests/composition_proof.rs`. The validated/event-sourced
+//! WRITE surface (`EquityWriteService`) is still un-composed — no deployed service drives it. Both
+//! remain gated behind the `unstable-write-service` feature; the crate's default public surface is
+//! generic CRUD, so do not assume "writes go through events" today.
 
 use std::sync::Arc;
 
@@ -26,8 +26,9 @@ use super::types::*;
 ///
 /// This trait defines read-only operations that other modules can use.
 /// Implementations should NOT expose internal domain logic.
-/// Un-composed read contract: declared but not implemented in-tree. Gated behind
-/// `unstable-write-service` until a composing backend-service provides an `impl`.
+/// Read contract for other modules. Realized in-tree by `EquityQueryServiceImpl`
+/// (`application::service`); a composing backend-service may provide its own impl. Gated behind
+/// `unstable-write-service`.
 #[cfg(feature = "unstable-write-service")]
 #[async_trait]
 pub trait EquityQueryService: Send + Sync {

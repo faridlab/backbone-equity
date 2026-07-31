@@ -41,8 +41,8 @@ pub use events::*;
 /// - `ShareTransactionId` - Type-safe ID wrapper
 ///
 /// ## Public Services
-/// - `EquityQueryService` - Read-only queries (UN-COMPOSED: declared but not implemented in-tree;
-///   gated behind `unstable-write-service` — not yet a realized contract)
+/// - `EquityQueryService` - Read-only queries (realized in-tree by `EquityQueryServiceImpl`; gated
+///   behind `unstable-write-service`)
 ///
 /// ## Public Events
 /// - `DividendCreatedEvent` - Published when Dividend is created
