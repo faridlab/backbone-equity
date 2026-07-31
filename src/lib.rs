@@ -68,10 +68,12 @@ use sqlx::PgPool;
 /// let router = equity.all_crud_routes();
 /// ```
 pub struct EquityModule {
-    pub dividend_service: Arc<DividendService>,
-    pub share_class_service: Arc<ShareClassService>,
-    pub shareholder_service: Arc<ShareholderService>,
-    pub share_transaction_service: Arc<ShareTransactionService>,
+    pub(crate) dividend_service: Arc<DividendService>,
+    pub(crate) share_class_service: Arc<ShareClassService>,
+    pub(crate) shareholder_service: Arc<ShareholderService>,
+    pub(crate) share_transaction_service: Arc<ShareTransactionService>,
+    // <<< CUSTOM FIELDS
+    // END CUSTOM
 }
 
 impl EquityModule {
