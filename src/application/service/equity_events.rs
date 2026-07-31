@@ -17,6 +17,28 @@ pub enum EquityEvent {
         quantity: Decimal,
         amount: Decimal,
     },
+    /// Shares moved between two holders — an ownership change with NO GL post. Both legs (transfer_out
+    /// from the sender, transfer_in to the receiver) are one movement under a shared `transfer_group_id`,
+    /// so the cap table nets to zero across holders; a projection applies it as a paired debit/credit.
+    SharesTransferred {
+        transfer_group_id: Uuid,
+        company_id: Uuid,
+        share_class_id: Uuid,
+        from_shareholder_id: Uuid,
+        to_shareholder_id: Uuid,
+        quantity: Decimal,
+    },
+    /// Shares bought back from a holder and retired — the cap table shrank and cash went out. Distinct
+    /// from `SharesIssued` (which grows the table): a positions projection MUST treat this as a removal,
+    /// not an addition, or the reconstructed holdings diverge from the register.
+    SharesBoughtBack {
+        transaction_id: Uuid,
+        company_id: Uuid,
+        share_class_id: Uuid,
+        shareholder_id: Uuid,
+        quantity: Decimal,
+        amount: Decimal,
+    },
     /// A dividend was declared on a class — the payable is booked, cash not yet out.
     DividendDeclared {
         dividend_id: Uuid,
@@ -40,6 +62,8 @@ impl EquityEvent {
     pub fn company_id(&self) -> Uuid {
         match self {
             Self::SharesIssued { company_id, .. }
+            | Self::SharesTransferred { company_id, .. }
+            | Self::SharesBoughtBack { company_id, .. }
             | Self::DividendDeclared { company_id, .. }
             | Self::DividendPaid { company_id, .. } => *company_id,
         }

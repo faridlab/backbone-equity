@@ -66,11 +66,10 @@ impl EquityWriteService {
         lines.push(GlPostLine::credit(b.bank_account_id, amount).with_description("Buyback — cash out"));
         let ack = self.post(sink, &b.company_id, "buyback", txn_id, b.txn_date, None, "Share buyback", lines).await?;
 
-        let event = EquityEvent::SharesIssued {
+        let event = EquityEvent::SharesBoughtBack {
             transaction_id: txn_id, company_id: b.company_id, share_class_id: b.share_class_id,
             shareholder_id: b.shareholder_id, quantity: b.quantity, amount,
         };
-        // (buyback reuses the movement event shape; a dedicated SharesBoughtBack can be added when a consumer needs it)
         stage(&mut tx, "SharesBoughtBack", "ShareTransaction", txn_id, &event).await?;
         tx.commit().await?;
         events.publish(&event);

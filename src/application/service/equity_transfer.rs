@@ -14,12 +14,17 @@ use uuid::Uuid;
 
 use crate::infrastructure::persistence::NewTransferLegRow;
 
-use super::equity_write_service::{EquityError, EquityWriteService, TransferShares};
+use super::equity_events::{EquityEvent, EquityEventSink};
+use super::equity_write_service::{EquityError, EquityWriteService, TransferShares, stage};
 
 impl EquityWriteService {
     /// Transfer shares between two holders — an ownership change, NO GL. Bounds the outgoing quantity against
     /// the sender's live holding under a per-(class,holder) advisory lock, so the register can't go negative.
-    pub async fn transfer_shares(&self, t: TransferShares) -> Result<Uuid, EquityError> {
+    pub async fn transfer_shares(
+        &self,
+        t: TransferShares,
+        events: &dyn EquityEventSink,
+    ) -> Result<Uuid, EquityError> {
         if t.quantity <= Decimal::ZERO {
             return Err(EquityError::Invalid("quantity must be positive".into()));
         }
@@ -54,7 +59,17 @@ impl EquityWriteService {
                 txn_date: t.txn_date,
             }).await?;
         }
+        let event = EquityEvent::SharesTransferred {
+            transfer_group_id: group,
+            company_id: t.company_id,
+            share_class_id: t.share_class_id,
+            from_shareholder_id: t.from_shareholder_id,
+            to_shareholder_id: t.to_shareholder_id,
+            quantity: t.quantity,
+        };
+        stage(&mut tx, "SharesTransferred", "ShareTransaction", group, &event).await?;
         tx.commit().await?;
+        events.publish(&event);
         Ok(group)
     }
 }

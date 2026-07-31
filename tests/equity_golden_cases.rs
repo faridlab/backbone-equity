@@ -76,14 +76,14 @@ async fn egc3_transfer_moves_ownership_no_gl() {
     svc.transfer_shares(TransferShares {
         company_id: company, share_class_id: class, from_shareholder_id: alice, to_shareholder_id: bob,
         quantity: dec("30"), txn_date: today(),
-    }).await.unwrap();
+    }, &CapturingSink::new()).await.unwrap();
     assert_eq!(gl.count(), before, "a transfer posts NO GL");
 
     // Alice 100−30=70, Bob 30. (holdings verified via a subsequent transfer that would fail if wrong.)
     let over = svc.transfer_shares(TransferShares {
         company_id: company, share_class_id: class, from_shareholder_id: bob, to_shareholder_id: alice,
         quantity: dec("31"), txn_date: today(),
-    }).await;
+    }, &CapturingSink::new()).await;
     assert!(matches!(over, Err(EquityError::InsufficientShares { .. })), "Bob holds only 30");
 }
 
