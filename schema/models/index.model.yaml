@@ -14,6 +14,12 @@ version: 2
 schema: equity
 description: "Equity / cap table: ShareClass + Shareholder + ShareTransaction (issue/transfer/buyback) + Dividend — the 10th GL producer"
 
+# ADR-0014 company fence: every schema entity here (share classes, shareholders,
+# share transactions, dividends) is company-scoped and fenced strict. outbox_events
+# is relay infrastructure, not a schema model — fenced by its own migration, outside
+# this declaration.
+company_fence: strict
+
 config:
   database: postgresql
   soft_delete: true
