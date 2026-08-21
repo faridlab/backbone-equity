@@ -86,7 +86,7 @@ impl EquityQueryService for EquityQueryServiceImpl {
             currency: e.currency,
             share_capital_account_id: e.share_capital_account_id,
             share_premium_account_id: e.share_premium_account_id,
-            is_active: e.is_active,
+            status: e.status,
             metadata: meta(&e.metadata),
         }))
     }

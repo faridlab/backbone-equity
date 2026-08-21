@@ -3,6 +3,8 @@ use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use uuid::Uuid;
 use rust_decimal::Decimal;
+
+use super::ShareClassStatus;
 use super::AuditMetadata;
 
 /// Strongly-typed ID for ShareClass
@@ -56,7 +58,7 @@ pub struct ShareClass {
     pub currency: String,
     pub share_capital_account_id: Uuid,
     pub share_premium_account_id: Uuid,
-    pub is_active: bool,
+    pub status: ShareClassStatus,
     #[serde(default)]
     #[sqlx(json)]
     pub metadata: AuditMetadata,
@@ -65,11 +67,11 @@ pub struct ShareClass {
 impl ShareClass {
     /// Create a builder for ShareClass
     pub fn builder() -> ShareClassBuilder {
-        ShareClassBuilder::default()
+        <ShareClassBuilder as Default>::default()
     }
 
     /// Create a new ShareClass with required fields
-    pub fn new(company_id: Uuid, code: String, name: String, par_value: Decimal, currency: String, share_capital_account_id: Uuid, share_premium_account_id: Uuid, is_active: bool) -> Self {
+    pub fn new(company_id: Uuid, code: String, name: String, par_value: Decimal, currency: String, share_capital_account_id: Uuid, share_premium_account_id: Uuid, status: ShareClassStatus) -> Self {
         Self {
             id: Uuid::new_v4(),
             company_id,
@@ -79,7 +81,7 @@ impl ShareClass {
             currency,
             share_capital_account_id,
             share_premium_account_id,
-            is_active,
+            status,
             metadata: AuditMetadata::default(),
         }
     }
@@ -134,6 +136,11 @@ impl ShareClass {
         self.metadata.deleted_by.as_ref()
     }
 
+    /// Get the current status
+    pub fn status(&self) -> &ShareClassStatus {
+        &self.status
+    }
+
 
     // ==========================================================
     // Partial Update
@@ -164,8 +171,8 @@ impl ShareClass {
                 "share_premium_account_id" => {
                     if let Ok(v) = serde_json::from_value(value) { self.share_premium_account_id = v; }
                 }
-                "is_active" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.is_active = v; }
+                "status" => {
+                    if let Ok(v) = serde_json::from_value(value) { self.status = v; }
                 }
                 _ => {} // ignore unknown fields
             }
@@ -224,6 +231,7 @@ impl backbone_orm::EntityRepoMeta for ShareClass {
         m.insert("company_id".to_string(), "uuid".to_string());
         m.insert("share_capital_account_id".to_string(), "uuid".to_string());
         m.insert("share_premium_account_id".to_string(), "uuid".to_string());
+        m.insert("status".to_string(), "share_class_status".to_string());
         m
     }
     fn search_fields() -> &'static [&'static str] {
@@ -247,7 +255,7 @@ pub struct ShareClassBuilder {
     currency: Option<String>,
     share_capital_account_id: Option<Uuid>,
     share_premium_account_id: Option<Uuid>,
-    is_active: Option<bool>,
+    status: Option<ShareClassStatus>,
 }
 
 impl ShareClassBuilder {
@@ -293,9 +301,9 @@ impl ShareClassBuilder {
         self
     }
 
-    /// Set the is_active field (default: `true`)
-    pub fn is_active(mut self, value: bool) -> Self {
-        self.is_active = Some(value);
+    /// Set the status field (default: `ShareClassStatus::default()`)
+    pub fn status(mut self, value: ShareClassStatus) -> Self {
+        self.status = Some(value);
         self
     }
 
@@ -320,7 +328,7 @@ impl ShareClassBuilder {
             currency,
             share_capital_account_id,
             share_premium_account_id,
-            is_active: self.is_active.unwrap_or(true),
+            status: self.status.unwrap_or_default(),
             metadata: AuditMetadata::default(),
         })
     }

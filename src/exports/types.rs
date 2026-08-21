@@ -120,7 +120,7 @@ pub struct ShareClassDto {
     pub currency: String,
     pub share_capital_account_id: Uuid,
     pub share_premium_account_id: Uuid,
-    pub is_active: bool,
+    pub status: ShareClassStatus,
     pub metadata: serde_json::Value,
 }
 
@@ -129,6 +129,7 @@ pub struct ShareClassDto {
 pub struct ShareClassSummary {
     pub id: ShareClassId,
     pub name: String,
+    pub status: ShareClassStatus,
 }
 
 /// Reference to ShareClass for foreign key relationships

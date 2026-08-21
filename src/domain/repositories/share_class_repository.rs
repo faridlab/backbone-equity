@@ -9,7 +9,7 @@ use async_trait::async_trait;
 use anyhow::Result;
 use uuid::Uuid;
 
-use crate::domain::entity::ShareClass;
+use crate::domain::entity::{ShareClass, ShareClassStatus};
 
 /// Pagination parameters for list queries
 #[derive(Debug, Clone, Default)]
@@ -50,13 +50,13 @@ pub struct ShareClassFilter {
     pub currency: Option<String>,
     pub share_capital_account_id: Option<Uuid>,
     pub share_premium_account_id: Option<Uuid>,
-    pub is_active: Option<bool>,
+    pub status: Option<ShareClassStatus>,
 }
 
 impl ShareClassFilter {
     /// Check if any filter is set
     pub fn has_filters(&self) -> bool {
-        self.company_id.is_some() || self.code.is_some() || self.name.is_some() || self.currency.is_some() || self.share_capital_account_id.is_some() || self.share_premium_account_id.is_some() || self.is_active.is_some()
+        self.company_id.is_some() || self.code.is_some() || self.name.is_some() || self.currency.is_some() || self.share_capital_account_id.is_some() || self.share_premium_account_id.is_some() || self.status.is_some()
     }
 }
 

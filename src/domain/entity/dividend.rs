@@ -69,7 +69,7 @@ pub struct Dividend {
 impl Dividend {
     /// Create a builder for Dividend
     pub fn builder() -> DividendBuilder {
-        DividendBuilder::default()
+        <DividendBuilder as Default>::default()
     }
 
     /// Create a new Dividend with required fields
@@ -364,7 +364,7 @@ impl DividendBuilder {
             per_share_amount,
             shares_outstanding,
             total_amount,
-            status: self.status.unwrap_or(DividendStatus::default()),
+            status: self.status.unwrap_or_default(),
             retained_earnings_account_id,
             dividend_payable_account_id,
             metadata: AuditMetadata::default(),

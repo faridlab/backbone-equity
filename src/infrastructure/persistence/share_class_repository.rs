@@ -41,7 +41,7 @@ impl ShareClassRepository {
 
 /// The exact row a share-class registration writes.
 ///
-/// `is_active` is not a field — the INSERT hard-codes `true`.
+/// `status` is not a field — the INSERT hard-codes `'active'`.
 pub struct NewShareClassRow<'a> {
     pub id: Uuid,
     pub company_id: Uuid,
@@ -59,7 +59,7 @@ pub struct ShareClassDetailRow {
     pub par_value: Decimal,
     pub share_capital_account_id: Uuid,
     pub share_premium_account_id: Uuid,
-    pub is_active: bool,
+    pub status: String,
 }
 
 /// Hand-written ShareClass SQL. Lives here (not in the write service) per the module's 4-layer rule:
@@ -81,8 +81,8 @@ impl ShareClassRepository {
             sqlx::query(
                 r#"INSERT INTO equity.share_classes
                      (id, company_id, code, name, par_value, currency, share_capital_account_id,
-                      share_premium_account_id, is_active)
-                   VALUES ($1,$2,$3,$4,$5,$6,$7,$8,true)"#,
+                      share_premium_account_id, status)
+                   VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'active')"#,
             )
             .bind(c.id).bind(c.company_id).bind(c.code).bind(c.name).bind(c.par_value)
             .bind(c.currency).bind(c.share_capital_account_id).bind(c.share_premium_account_id),
@@ -106,7 +106,7 @@ impl ShareClassRepository {
         let row = company_scope::fetch_optional_row_scoped(
             pool,
             sqlx::query(
-                r#"SELECT par_value, currency, share_capital_account_id, share_premium_account_id, is_active
+                r#"SELECT par_value, currency, share_capital_account_id, share_premium_account_id, status::text AS status
                    FROM equity.share_classes WHERE id=$1 AND (metadata->>'deleted_at') IS NULL"#,
             )
             .bind(id),
@@ -116,7 +116,7 @@ impl ShareClassRepository {
             par_value: r.get("par_value"),
             share_capital_account_id: r.get("share_capital_account_id"),
             share_premium_account_id: r.get("share_premium_account_id"),
-            is_active: r.get("is_active"),
+            status: r.get("status"),
         }))
     }
 }

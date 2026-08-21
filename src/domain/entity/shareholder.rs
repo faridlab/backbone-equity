@@ -62,7 +62,7 @@ pub struct Shareholder {
 impl Shareholder {
     /// Create a builder for Shareholder
     pub fn builder() -> ShareholderBuilder {
-        ShareholderBuilder::default()
+        <ShareholderBuilder as Default>::default()
     }
 
     /// Create a new Shareholder with required fields
@@ -274,7 +274,7 @@ impl ShareholderBuilder {
             company_id,
             party_id: self.party_id,
             name,
-            holder_type: self.holder_type.unwrap_or(HolderType::default()),
+            holder_type: self.holder_type.unwrap_or_default(),
             metadata: AuditMetadata::default(),
         })
     }

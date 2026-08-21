@@ -52,10 +52,11 @@ models:
         attributes: ["@required", "@exclude_from_foreign_key_check"]
         description: "Equity account for the excess over par (APIC) # logical FK to accounting.Account.id"
 
-      is_active:
-        type: bool
-        attributes: ["@default(true)"]
-        description: "Whether new movements may reference this class"
+      # replaces is_active (boolean flipped to lifecycle enum)
+      status:
+        type: ShareClassStatus
+        attributes: ["@default(active)"]
+        description: "Lifecycle (inactive classes stop accepting new movements; existing positions and booked capital are untouched)"
 
       metadata:
         type: Metadata
@@ -115,3 +116,12 @@ enums:
         default: true
       - name: entity
         description: "A company / institution"
+
+  - name: ShareClassStatus
+    description: "Lifecycle of a share class"
+    variants:
+      - name: active
+        description: "New movements may reference this class"
+        default: true
+      - name: inactive
+        description: "No new movements; existing positions and booked capital are untouched"

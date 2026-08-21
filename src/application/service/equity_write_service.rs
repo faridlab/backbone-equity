@@ -159,7 +159,7 @@ impl EquityWriteService {
     pub(super) async fn load_class(&self, id: Uuid) -> Result<ShareClassRow, EquityError> {
         let r = self.share_classes.fetch_class(&self.pool, id).await?
             .ok_or(EquityError::NotFound("share_class"))?;
-        if !r.is_active {
+        if r.status != "active" {
             return Err(EquityError::InvalidState("share class is inactive"));
         }
         Ok(ShareClassRow {

@@ -71,7 +71,7 @@ pub struct ShareTransaction {
 impl ShareTransaction {
     /// Create a builder for ShareTransaction
     pub fn builder() -> ShareTransactionBuilder {
-        ShareTransactionBuilder::default()
+        <ShareTransactionBuilder as Default>::default()
     }
 
     /// Create a new ShareTransaction with required fields

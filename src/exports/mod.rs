@@ -8,7 +8,7 @@
 //! ## Usage from other modules
 //!
 //! ```text
-//! use equity::exports::{DividendDto, EquityQueryService};
+//! use equity::exports::{DividendDto};
 //! ```
 
 mod types;
@@ -39,10 +39,6 @@ pub use events::*;
 /// - `ShareTransactionDto` - Data transfer object for ShareTransaction
 /// - `ShareTransactionSummary` - Summary view of ShareTransaction
 /// - `ShareTransactionId` - Type-safe ID wrapper
-///
-/// ## Public Services
-/// - `EquityQueryService` - Read-only queries (realized in-tree by `EquityQueryServiceImpl`; gated
-///   behind `unstable-write-service`)
 ///
 /// ## Public Events
 /// - `DividendCreatedEvent` - Published when Dividend is created

@@ -8,6 +8,7 @@ pub mod shareholder;
 pub mod share_transaction;
 pub mod dividend_status;
 pub mod holder_type;
+pub mod share_class_status;
 pub mod share_txn_type;
 
 // Re-exports
@@ -25,6 +26,7 @@ pub use share_transaction::ShareTransactionBuilder;
 pub use share_transaction::ShareTransactionId;
 pub use dividend_status::DividendStatus;
 pub use holder_type::HolderType;
+pub use share_class_status::ShareClassStatus;
 pub use share_txn_type::ShareTxnType;
 
 // ==========================================================================

@@ -31,7 +31,7 @@ impl TestDataGenerator for ShareClassTestData {
             "currency": format!("Test {}", Uuid::new_v4().to_string().split('-').next().unwrap()),
             "share_capital_account_id": Uuid::new_v4().to_string(),
             "share_premium_account_id": Uuid::new_v4().to_string(),
-            "is_active": false,
+            "status": "active",
             "metadata": json!({}),
         })
     }
@@ -47,7 +47,7 @@ impl TestDataGenerator for ShareClassTestData {
             "currency": format!("Test {}", Uuid::new_v4().to_string().split('-').next().unwrap()),
             "share_capital_account_id": Uuid::new_v4().to_string(),
             "share_premium_account_id": Uuid::new_v4().to_string(),
-            "is_active": false,
+            "status": "active",
             "metadata": json!({}),
         })
     }
