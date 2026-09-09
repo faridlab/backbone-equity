@@ -17,15 +17,10 @@ models:
         attributes: ["@id", "@default(uuid)"]
         description: "Unique share-class identifier"
 
-      company_id:
-        type: uuid
-        attributes: ["@required", "@exclude_from_foreign_key_check"]
-        description: "Books owner # logical FK to organization.Company.id"
-
       code:
         type: string
         attributes: ["@required", "@max(40)"]
-        description: "Short code unique within a company (e.g. ORD, PREF-A)"
+        description: "Short code (e.g. ORD, PREF-A); per-unit uniqueness is deployment posture, installed by the composing service's tenancy decorator (ADR-0029)"
 
       name:
         type: string
@@ -63,10 +58,9 @@ models:
         attributes: ["@audit_metadata"]
         description: "Audit metadata (created_at, updated_at, deleted_at, created_by, updated_by, deleted_by)"
 
-    indexes:
-      - type: unique
-        fields: [company_id, code]
-        where: "deleted_at IS NULL"
+    # No tenancy indexes (ADR-0029): the module is tenant-agnostic. The per-unit unique on
+    # (company_id, code) was posture and is installed — org-scoped — by the composing
+    # service's tenancy decorator, not declared here.
 
   - name: Shareholder
     collection: shareholders
@@ -77,11 +71,6 @@ models:
         type: uuid
         attributes: ["@id", "@default(uuid)"]
         description: "Unique shareholder identifier"
-
-      company_id:
-        type: uuid
-        attributes: ["@required", "@exclude_from_foreign_key_check"]
-        description: "Books owner # logical FK to organization.Company.id"
 
       party_id:
         type: uuid?
@@ -103,9 +92,7 @@ models:
         attributes: ["@audit_metadata"]
         description: "Audit metadata (created_at, updated_at, deleted_at, created_by, updated_by, deleted_by)"
 
-    indexes:
-      - type: index
-        fields: [company_id]
+    # No tenancy indexes (ADR-0029): see ShareClass.
 
 enums:
   - name: HolderType

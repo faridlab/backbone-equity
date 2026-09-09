@@ -19,11 +19,6 @@ models:
         attributes: ["@id", "@default(uuid)"]
         description: "Unique dividend identifier"
 
-      company_id:
-        type: uuid
-        attributes: ["@required", "@exclude_from_foreign_key_check"]
-        description: "Books owner # logical FK to organization.Company.id"
-
       share_class_id:
         type: uuid
         attributes: ["@required", "@foreign_key(ShareClass.id)"]
@@ -74,8 +69,9 @@ models:
         description: "Audit metadata (created_at, updated_at, deleted_at, created_by, updated_by, deleted_by)"
 
     indexes:
-      - type: index
-        fields: [company_id, share_class_id]
+      # No tenancy-leading index (ADR-0029): the module is tenant-agnostic — the
+      # company-leading class index was posture; the composing service's tenancy
+      # decorator installs the per-unit form.
       - type: index
         fields: [status]
 

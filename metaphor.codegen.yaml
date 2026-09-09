@@ -32,6 +32,14 @@ user_owned:
   - "src/infrastructure/persistence/shareholder_repository.rs"
   - "src/infrastructure/persistence/share_transaction_repository.rs"
   - "src/presentation/http/guarded_routes.rs"
+  # In-tree reference impl of the read contract (hand-authored alongside the generated
+  # service aliases; gated behind `unstable-write-service`).
+  - "src/application/service/equity_query_service_impl.rs"
+
+  # Hand-authored migrations (the guarded company-artifact strip — the strip's ordering
+  # guard is hand-authored logic, not schema-derived emission).
+  - "migrations/20260909104947_strip_tenancy.up.sql"
+  - "migrations/20260909104947_strip_tenancy.down.sql"
 
   # Behavior tests (the golden cases / oracle) + BDD features.
   - "tests/features/**"
@@ -39,6 +47,7 @@ user_owned:
   - "tests/integrity_probes.rs"
   - "tests/equity_gl_seam.rs"
   - "tests/guarded_routes_probe.rs"
+  - "tests/composition_proof.rs"
   - "tests/common/**"
 
   # Hand-authored module documentation.

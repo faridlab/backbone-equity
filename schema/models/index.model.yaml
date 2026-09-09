@@ -14,11 +14,12 @@ version: 2
 schema: equity
 description: "Equity / cap table: ShareClass + Shareholder + ShareTransaction (issue/transfer/buyback) + Dividend — the 10th GL producer"
 
-# ADR-0014 company fence: every schema entity here (share classes, shareholders,
-# share transactions, dividends) is company-scoped and fenced strict. outbox_events
-# is relay infrastructure, not a schema model — fenced by its own migration, outside
-# this declaration.
-company_fence: strict
+# Tenancy: none, by design (ADR-0029). The module is tenant-agnostic and reusable —
+# it ships no scoping column and no fence declaration. A composing backend-service
+# that wants these tables org-scoped declares them in its tenancy.yaml; the
+# decorator installs org_unit_id, the RLS policy, the kind guard, and per-unit
+# uniques at composition time. outbox_events is relay infrastructure, not a schema
+# model — fenced by its own migration, outside this declaration.
 
 config:
   database: postgresql

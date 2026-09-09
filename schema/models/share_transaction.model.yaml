@@ -19,11 +19,6 @@ models:
         attributes: ["@id", "@default(uuid)"]
         description: "Unique transaction identifier"
 
-      company_id:
-        type: uuid
-        attributes: ["@required", "@exclude_from_foreign_key_check"]
-        description: "Books owner # logical FK to organization.Company.id"
-
       share_class_id:
         type: uuid
         attributes: ["@required", "@foreign_key(ShareClass.id)"]
@@ -92,8 +87,9 @@ models:
         inverse: transactions
 
     indexes:
-      - type: index
-        fields: [company_id, share_class_id, shareholder_id]
+      # No tenancy-leading index (ADR-0029): the module is tenant-agnostic — the
+      # company-leading register index was posture; the composing service's tenancy
+      # decorator installs the per-unit form.
       - type: index
         fields: [transfer_group_id]
 
