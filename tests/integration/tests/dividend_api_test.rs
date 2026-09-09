@@ -24,7 +24,6 @@ impl TestDataGenerator for DividendTestData {
         let now = Utc::now().to_rfc3339();
         json!({
             "id": Uuid::new_v4().to_string(),
-            "company_id": Uuid::new_v4().to_string(),
             "share_class_id": Uuid::new_v4().to_string(),
             "declaration_date": Utc::now().format("%Y-%m-%d").to_string(),
             "payment_date": null,
@@ -42,7 +41,6 @@ impl TestDataGenerator for DividendTestData {
         let now = Utc::now().to_rfc3339();
         json!({
             "id": id,
-            "company_id": Uuid::new_v4().to_string(),
             "share_class_id": Uuid::new_v4().to_string(),
             "declaration_date": Utc::now().format("%Y-%m-%d").to_string(),
             "payment_date": null,
@@ -64,7 +62,13 @@ impl TestDataGenerator for DividendTestData {
 
     async fn seed_dependencies(&self, api: &ApiTest) -> Vec<(String, String)> {
         let mut deps: Vec<(String, String)> = Vec::new();
-        if let Some(id) = super::crud_test_base::create_and_get_id(api, "/api/v1/share_classes", &super::share_class_api_test::ShareClassTestData).await {
+        if let Some(id) = super::crud_test_base::create_and_get_id(
+            api,
+            "/api/v1/share_classes",
+            &super::share_class_api_test::ShareClassTestData,
+        )
+        .await
+        {
             deps.push(("share_class_id".to_string(), id));
         }
         deps

@@ -2,12 +2,18 @@
 //! the share-issue journal and the dividend declare→pay journals land balanced, accounting accepts
 //! `source_type='equity'`, and a fully-issued-then-bought-back-and-paid company nets its equity/cash movements
 //! correctly. ZERO normal Cargo edge — the envelope is the wire contract.
+//!
+//! Tenancy (ADR-0029): the module carries none. The envelope's company id (accounting's books owner) and the
+//! outbox record's relay key are read off the ambient org request scope, so each write runs inside
+//! `with_org_request_scope` — the test stands in for the composing service, which owns that scope in
+//! production.
 
 mod common;
 use common::*;
 
 use backbone_equity::application::service::equity_events::LoggingSink;
 use backbone_equity::application::service::equity_write_service::*;
+use backbone_orm::org_scope::{with_org_request_scope, OrgScope};
 use rust_decimal::Decimal;
 use uuid::Uuid;
 
@@ -15,13 +21,25 @@ async fn setup(pool: &sqlx::PgPool) -> (Uuid, EquityWriteService, EqAccounts, Uu
     let company = Uuid::new_v4();
     let svc = EquityWriteService::new(pool.clone());
     let a = eq_accounts(pool, company).await;
-    let class = svc.register_share_class(NewShareClass {
-        company_id: company, code: "ORD".into(), name: "Ordinary".into(), par_value: dec("1000"),
-        currency: "IDR".into(), share_capital_account_id: a.share_capital, share_premium_account_id: a.share_premium,
-    }).await.unwrap();
-    let holder = svc.register_shareholder(NewShareholder {
-        company_id: company, party_id: None, name: "Alice".into(), holder_type: "individual".into(),
-    }).await.unwrap();
+    let class = svc
+        .register_share_class(NewShareClass {
+            code: "ORD".into(),
+            name: "Ordinary".into(),
+            par_value: dec("1000"),
+            currency: "IDR".into(),
+            share_capital_account_id: a.share_capital,
+            share_premium_account_id: a.share_premium,
+        })
+        .await
+        .unwrap();
+    let holder = svc
+        .register_shareholder(NewShareholder {
+            party_id: None,
+            name: "Alice".into(),
+            holder_type: "individual".into(),
+        })
+        .await
+        .unwrap();
     (company, svc, a, class, holder)
 }
 
@@ -32,16 +50,35 @@ async fn eseam1_issue_posts_balanced_capital_journal() {
     let pool = pool().await;
     let (company, svc, a, class, holder) = setup(&pool).await;
     let gl = GlAdapter::new(pool.clone());
+    let scope = OrgScope::for_company_unit(company);
 
-    svc.issue_shares(IssueShares {
-        company_id: company, share_class_id: class, shareholder_id: holder, quantity: dec("100"),
-        price_per_share: dec("1500"), txn_date: today(), bank_account_id: a.bank, reference: None,
-    }, &gl, &LoggingSink).await.expect("real accounting accepts the equity issue post");
+    with_org_request_scope(
+        &pool,
+        scope.clone(),
+        svc.issue_shares(
+            IssueShares {
+                share_class_id: class,
+                shareholder_id: holder,
+                quantity: dec("100"),
+                price_per_share: dec("1500"),
+                txn_date: today(),
+                bank_account_id: a.bank,
+                reference: None,
+            },
+            &gl,
+            &LoggingSink,
+        ),
+    )
+    .await
+    .unwrap()
+    .expect("real accounting accepts the equity issue post");
 
     assert_eq!(balance(&pool, a.bank).await, dec("150000"));
     assert_eq!(balance(&pool, a.share_capital).await, dec("-100000"));
     assert_eq!(balance(&pool, a.share_premium).await, dec("-50000"));
-    let net = balance(&pool, a.bank).await + balance(&pool, a.share_capital).await + balance(&pool, a.share_premium).await;
+    let net = balance(&pool, a.bank).await
+        + balance(&pool, a.share_capital).await
+        + balance(&pool, a.share_premium).await;
     assert_eq!(net, Decimal::ZERO, "double-entry: Σ debits = Σ credits");
 }
 
@@ -52,24 +89,83 @@ async fn eseam2_dividend_declare_then_pay_nets_payable_to_zero() {
     let pool = pool().await;
     let (company, svc, a, class, holder) = setup(&pool).await;
     let gl = GlAdapter::new(pool.clone());
-    svc.issue_shares(IssueShares {
-        company_id: company, share_class_id: class, shareholder_id: holder, quantity: dec("200"),
-        price_per_share: dec("1000"), txn_date: today(), bank_account_id: a.bank, reference: None,
-    }, &gl, &LoggingSink).await.unwrap();
+    let scope = OrgScope::for_company_unit(company);
+    with_org_request_scope(
+        &pool,
+        scope.clone(),
+        svc.issue_shares(
+            IssueShares {
+                share_class_id: class,
+                shareholder_id: holder,
+                quantity: dec("200"),
+                price_per_share: dec("1000"),
+                txn_date: today(),
+                bank_account_id: a.bank,
+                reference: None,
+            },
+            &gl,
+            &LoggingSink,
+        ),
+    )
+    .await
+    .unwrap()
+    .unwrap();
 
-    let div = svc.declare_dividend(DeclareDividend {
-        company_id: company, share_class_id: class, per_share_amount: dec("25"), declaration_date: today(),
-        retained_earnings_account_id: a.retained_earnings, dividend_payable_account_id: a.dividend_payable,
-    }, &gl, &LoggingSink).await.unwrap();
+    let div = with_org_request_scope(
+        &pool,
+        scope.clone(),
+        svc.declare_dividend(
+            DeclareDividend {
+                share_class_id: class,
+                per_share_amount: dec("25"),
+                declaration_date: today(),
+                retained_earnings_account_id: a.retained_earnings,
+                dividend_payable_account_id: a.dividend_payable,
+            },
+            &gl,
+            &LoggingSink,
+        ),
+    )
+    .await
+    .unwrap()
+    .unwrap();
     assert_eq!(div.amount, dec("5000"), "25 × 200 outstanding");
-    assert_eq!(balance(&pool, a.dividend_payable).await, dec("-5000"), "payable booked");
+    assert_eq!(
+        balance(&pool, a.dividend_payable).await,
+        dec("-5000"),
+        "payable booked"
+    );
 
-    svc.pay_dividend(div.id, a.bank, today(), &gl, &LoggingSink).await.unwrap();
-    assert_eq!(balance(&pool, a.dividend_payable).await, Decimal::ZERO, "payable settled");
+    with_org_request_scope(
+        &pool,
+        scope.clone(),
+        svc.pay_dividend(div.id, a.bank, today(), &gl, &LoggingSink),
+    )
+    .await
+    .unwrap()
+    .unwrap();
+    assert_eq!(
+        balance(&pool, a.dividend_payable).await,
+        Decimal::ZERO,
+        "payable settled"
+    );
     // Bank: +200,000 issue − 5,000 dividend = 195,000.
-    assert_eq!(balance(&pool, a.bank).await, dec("195000"), "cash reduced by the dividend paid");
+    assert_eq!(
+        balance(&pool, a.bank).await,
+        dec("195000"),
+        "cash reduced by the dividend paid"
+    );
 
     // Paying again is refused (settled once).
-    let again = svc.pay_dividend(div.id, a.bank, today(), &gl, &LoggingSink).await;
-    assert!(matches!(again, Err(EquityError::InvalidState(_))), "a paid dividend can't be re-paid");
+    let again = with_org_request_scope(
+        &pool,
+        scope.clone(),
+        svc.pay_dividend(div.id, a.bank, today(), &gl, &LoggingSink),
+    )
+    .await
+    .unwrap();
+    assert!(
+        matches!(again, Err(EquityError::InvalidState(_))),
+        "a paid dividend can't be re-paid"
+    );
 }
