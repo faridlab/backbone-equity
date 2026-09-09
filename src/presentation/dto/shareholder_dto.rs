@@ -5,9 +5,9 @@
 //! DTOs provide a clean separation between domain entities and API
 //! representations, with validation and OpenAPI documentation support.
 
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use chrono::{DateTime, Utc};
 
 #[cfg(feature = "openapi")]
 #[cfg(feature = "openapi")]
@@ -16,9 +16,9 @@ use utoipa::ToSchema;
 #[cfg(feature = "validation")]
 use validator::Validate;
 
-use crate::domain::entity::Shareholder;
 use crate::domain::entity::AuditMetadata;
 use crate::domain::entity::HolderType;
+use crate::domain::entity::Shareholder;
 
 // =============================================================================
 // Create DTO
@@ -33,9 +33,6 @@ use crate::domain::entity::HolderType;
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct CreateShareholderDto {
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
-    #[serde(alias = "company_id")]
-    pub company_id: Uuid,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "party_id")]
     pub party_id: Option<Uuid>,
     #[cfg_attr(feature = "validation", validate(length(max = 150)))]
@@ -58,9 +55,6 @@ pub struct CreateShareholderDto {
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateShareholderDto {
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
-    #[serde(alias = "company_id")]
-    pub company_id: Uuid,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "party_id")]
     pub party_id: Option<Uuid>,
     #[cfg_attr(feature = "validation", validate(length(max = 150)))]
@@ -83,9 +77,6 @@ pub struct UpdateShareholderDto {
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct PatchShareholderDto {
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
-    #[serde(skip_serializing_if = "Option::is_none", alias = "company_id")]
-    pub company_id: Option<Uuid>,
     #[serde(skip_serializing_if = "Option::is_none", alias = "party_id")]
     pub party_id: Option<Uuid>,
     #[cfg_attr(feature = "validation", validate(length(max = 150)))]
@@ -99,7 +90,7 @@ pub struct PatchShareholderDto {
 impl PatchShareholderDto {
     /// Check if any field is set
     pub fn has_changes(&self) -> bool {
-        self.company_id.is_some() || self.party_id.is_some() || self.name.is_some() || self.holder_type.is_some()
+        self.party_id.is_some() || self.name.is_some() || self.holder_type.is_some()
     }
 }
 
@@ -115,10 +106,11 @@ impl PatchShareholderDto {
 #[cfg_attr(feature = "openapi", derive(ToSchema))]
 #[serde(rename_all = "camelCase")]
 pub struct ShareholderResponseDto {
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
+    #[cfg_attr(
+        feature = "openapi",
+        schema(example = "550e8400-e29b-41d4-a716-446655440000")
+    )]
     pub id: Uuid,
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
-    pub company_id: Uuid,
     pub party_id: Option<Uuid>,
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     pub name: String,
@@ -180,9 +172,9 @@ impl ShareholderListResponseDto {
 #[serde(rename_all = "camelCase")]
 pub struct ShareholderSummaryDto {
     pub id: Uuid,
-    pub company_id: Uuid,
     pub party_id: Option<Uuid>,
     pub name: String,
+    pub holder_type: HolderType,
     pub created_at: Option<DateTime<Utc>>,
 }
 
@@ -194,7 +186,6 @@ impl From<Shareholder> for ShareholderResponseDto {
     fn from(entity: Shareholder) -> Self {
         Self {
             id: entity.id,
-            company_id: entity.company_id,
             party_id: entity.party_id,
             name: entity.name,
             holder_type: entity.holder_type,
@@ -208,9 +199,9 @@ impl From<Shareholder> for ShareholderSummaryDto {
         let created_at = backbone_core::PersistentEntity::created_at(&entity);
         Self {
             id: entity.id,
-            company_id: entity.company_id,
             party_id: entity.party_id,
             name: entity.name,
+            holder_type: entity.holder_type,
             created_at,
         }
     }
@@ -220,7 +211,6 @@ impl From<CreateShareholderDto> for Shareholder {
     fn from(dto: CreateShareholderDto) -> Self {
         Self {
             id: Uuid::new_v4(),
-            company_id: dto.company_id,
             party_id: dto.party_id,
             name: dto.name,
             holder_type: dto.holder_type,
@@ -233,7 +223,6 @@ impl From<&Shareholder> for ShareholderResponseDto {
     fn from(entity: &Shareholder) -> Self {
         Self {
             id: entity.id.clone(),
-            company_id: entity.company_id.clone(),
             party_id: entity.party_id.clone(),
             name: entity.name.clone(),
             holder_type: entity.holder_type.clone(),
@@ -250,7 +239,6 @@ impl backbone_core::FromCreateDto<CreateShareholderDto> for Shareholder {
 
 impl backbone_core::ApplyUpdateDto<UpdateShareholderDto> for Shareholder {
     fn apply_update(mut self, dto: UpdateShareholderDto) -> backbone_core::ServiceResult<Self> {
-        self.company_id = dto.company_id;
         self.party_id = dto.party_id;
         self.name = dto.name;
         self.holder_type = dto.holder_type;

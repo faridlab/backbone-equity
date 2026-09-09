@@ -5,6 +5,10 @@
 //! below hold the hand-written Dividend SQL — the declaration insert and the settlement's
 //! compare-and-set claim (4-layer rule: services orchestrate, repos hold SQL).
 //!
+//! Tenancy (ADR-0029): the SQL here carries no tenant key. Pool reads ride the request-dedicated
+//! connection when the composing service bound one (its fence variables govern what the RLS layer
+//! accepts) and fall back to a plain pool read otherwise.
+//!
 //! Thin newtype over `backbone_orm::GenericCrudRepository<Dividend, backbone_orm::SoftDelete>`.
 //! All standard CRUD methods are available via `Deref`.
 
@@ -13,8 +17,6 @@ use chrono::NaiveDate;
 use rust_decimal::Decimal;
 use sqlx::{PgPool, Row};
 use uuid::Uuid;
-
-use backbone_orm::company_scope;
 
 use crate::domain::entity::Dividend;
 
@@ -31,7 +33,9 @@ pub struct DividendRepository(
 
 impl std::ops::Deref for DividendRepository {
     type Target = backbone_orm::GenericCrudRepository<Dividend, backbone_orm::SoftDelete>;
-    fn deref(&self) -> &Self::Target { &self.0 }
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
 }
 
 impl DividendRepository {
@@ -47,7 +51,6 @@ impl DividendRepository {
 /// the declaration was computed against, not a live read.
 pub struct NewDividendRow {
     pub id: Uuid,
-    pub company_id: Uuid,
     pub share_class_id: Uuid,
     pub declaration_date: NaiveDate,
     pub per_share_amount: Decimal,
@@ -59,7 +62,6 @@ pub struct NewDividendRow {
 
 /// A dividend's settlement state — what `pay_dividend` needs to settle the payable.
 pub struct DividendPaymentRow {
-    pub company_id: Uuid,
     pub total_amount: Decimal,
     pub status: String,
     pub dividend_payable_account_id: Uuid,
@@ -67,7 +69,6 @@ pub struct DividendPaymentRow {
 
 /// The basis a dividend's per-holder split is computed from.
 pub struct DividendBasisRow {
-    pub company_id: Uuid,
     pub share_class_id: Uuid,
     pub per_share_amount: Decimal,
 }
@@ -77,7 +78,8 @@ impl DividendRepository {
     /// Record a dividend declaration as `declared`.
     ///
     /// Takes the CALLER'S connection so the declaration and its outbox stage commit as one unit. The
-    /// caller has already bound the company on it (`bind_company_on`) — don't re-bind here.
+    /// caller has already propagated the ambient request scope onto it (`bind_org_scope_on`,
+    /// relay-only) — don't re-bind here.
     pub async fn insert_dividend(
         &self,
         conn: &mut sqlx::PgConnection,
@@ -85,13 +87,18 @@ impl DividendRepository {
     ) -> Result<(), sqlx::Error> {
         sqlx::query(
             r#"INSERT INTO equity.dividends
-                 (id, company_id, share_class_id, declaration_date, per_share_amount, shares_outstanding,
+                 (id, share_class_id, declaration_date, per_share_amount, shares_outstanding,
                   total_amount, status, retained_earnings_account_id, dividend_payable_account_id)
-               VALUES ($1,$2,$3,$4,$5,$6,$7,'declared'::dividend_status,$8,$9)"#,
+               VALUES ($1,$2,$3,$4,$5,$6,'declared'::dividend_status,$7,$8)"#,
         )
-        .bind(d.id).bind(d.company_id).bind(d.share_class_id).bind(d.declaration_date)
-        .bind(d.per_share_amount).bind(d.shares_outstanding).bind(d.total_amount)
-        .bind(d.retained_earnings_account_id).bind(d.dividend_payable_account_id)
+        .bind(d.id)
+        .bind(d.share_class_id)
+        .bind(d.declaration_date)
+        .bind(d.per_share_amount)
+        .bind(d.shares_outstanding)
+        .bind(d.total_amount)
+        .bind(d.retained_earnings_account_id)
+        .bind(d.dividend_payable_account_id)
         .execute(conn)
         .await?;
         Ok(())
@@ -99,26 +106,25 @@ impl DividendRepository {
 
     /// Read a dividend's settlement state. `Ok(None)` = not found.
     ///
-    /// ID-only: identified by the dividend id alone — no company argument. The read rides the
-    /// request-dedicated connection (which carries the caller's `app.company_id`), so another
-    /// company's dividend is simply not found. The company read off this row is what the caller then
-    /// binds onto the settlement tx.
+    /// ID-only: the dividend is identified by id alone (id is globally unique — the module carries no
+    /// tenancy). The read rides the request-dedicated connection when the composing service bound
+    /// one, so a row the caller's fence excludes is simply not found; with no scope bound this is a
+    /// plain lookup.
     pub async fn fetch_for_payment(
         &self,
         pool: &PgPool,
         dividend_id: Uuid,
     ) -> Result<Option<DividendPaymentRow>, sqlx::Error> {
-        let row = company_scope::fetch_optional_row_scoped(
+        let row = backbone_orm::org_scope::fetch_optional_row_scoped(
             pool,
             sqlx::query(
-                r#"SELECT company_id, total_amount, status::text AS status, dividend_payable_account_id
+                r#"SELECT total_amount, status::text AS status, dividend_payable_account_id
                    FROM equity.dividends WHERE id=$1 AND (metadata->>'deleted_at') IS NULL"#,
             )
             .bind(dividend_id),
         )
         .await?;
         Ok(row.map(|r| DividendPaymentRow {
-            company_id: r.get("company_id"),
             total_amount: r.get("total_amount"),
             status: r.get("status"),
             dividend_payable_account_id: r.get("dividend_payable_account_id"),
@@ -130,8 +136,7 @@ impl DividendRepository {
     /// what stops a concurrent pay from double-remitting.
     ///
     /// Takes the CALLER'S connection: the claim must commit with the outbox stage, and roll back with
-    /// it if the GL rejects the posting (leaving the dividend `declared`). The caller has already
-    /// bound the company on it — don't re-bind here.
+    /// it if the GL rejects the posting (leaving the dividend `declared`).
     pub async fn claim_payment(
         &self,
         conn: &mut sqlx::PgConnection,
@@ -142,7 +147,8 @@ impl DividendRepository {
             r#"UPDATE equity.dividends SET status='paid'::dividend_status, payment_date=$2
                WHERE id=$1 AND status='declared'::dividend_status"#,
         )
-        .bind(dividend_id).bind(payment_date)
+        .bind(dividend_id)
+        .bind(payment_date)
         .execute(conn)
         .await?;
         Ok(done.rows_affected())
@@ -155,17 +161,16 @@ impl DividendRepository {
         pool: &PgPool,
         dividend_id: Uuid,
     ) -> Result<Option<DividendBasisRow>, sqlx::Error> {
-        let row = company_scope::fetch_optional_row_scoped(
+        let row = backbone_orm::org_scope::fetch_optional_row_scoped(
             pool,
             sqlx::query(
-                r#"SELECT company_id, share_class_id, per_share_amount
+                r#"SELECT share_class_id, per_share_amount
                    FROM equity.dividends WHERE id=$1 AND (metadata->>'deleted_at') IS NULL"#,
             )
             .bind(dividend_id),
         )
         .await?;
         Ok(row.map(|r| DividendBasisRow {
-            company_id: r.get("company_id"),
             share_class_id: r.get("share_class_id"),
             per_share_amount: r.get("per_share_amount"),
         }))

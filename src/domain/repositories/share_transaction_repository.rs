@@ -5,8 +5,8 @@
 //! This trait defines the repository contract for the ShareTransaction aggregate.
 //! Implementation is in the infrastructure layer.
 
-use async_trait::async_trait;
 use anyhow::Result;
+use async_trait::async_trait;
 use uuid::Uuid;
 
 use crate::domain::entity::{ShareTransaction, ShareTxnType};
@@ -44,7 +44,6 @@ pub struct ShareTransactionPaginatedResult {
 /// Filter parameters for list queries
 #[derive(Debug, Clone, Default)]
 pub struct ShareTransactionFilter {
-    pub company_id: Option<Uuid>,
     pub share_class_id: Option<Uuid>,
     pub shareholder_id: Option<Uuid>,
     pub txn_type: Option<ShareTxnType>,
@@ -57,7 +56,13 @@ pub struct ShareTransactionFilter {
 impl ShareTransactionFilter {
     /// Check if any filter is set
     pub fn has_filters(&self) -> bool {
-        self.company_id.is_some() || self.share_class_id.is_some() || self.shareholder_id.is_some() || self.txn_type.is_some() || self.counterparty_shareholder_id.is_some() || self.transfer_group_id.is_some() || self.posting_reference.is_some() || self.gl_posted.is_some()
+        self.share_class_id.is_some()
+            || self.shareholder_id.is_some()
+            || self.txn_type.is_some()
+            || self.counterparty_shareholder_id.is_some()
+            || self.transfer_group_id.is_some()
+            || self.posting_reference.is_some()
+            || self.gl_posted.is_some()
     }
 }
 
@@ -67,7 +72,6 @@ impl ShareTransactionFilter {
 /// Implementations should be in the infrastructure layer.
 #[async_trait]
 pub trait ShareTransactionRepository: Send + Sync {
-
     // =========================================================================
     // Core CRUD Operations
     // =========================================================================
@@ -82,7 +86,8 @@ pub trait ShareTransactionRepository: Send + Sync {
     async fn find_all(&self) -> Result<Vec<ShareTransaction>>;
 
     /// Update share_transaction by ID
-    async fn update(&self, id: &str, entity: &ShareTransaction) -> Result<Option<ShareTransaction>>;
+    async fn update(&self, id: &str, entity: &ShareTransaction)
+        -> Result<Option<ShareTransaction>>;
 
     /// Delete share_transaction by ID
     async fn delete(&self, id: &str) -> Result<bool>;
@@ -92,10 +97,17 @@ pub trait ShareTransactionRepository: Send + Sync {
     // =========================================================================
 
     /// List share_transaction with pagination
-    async fn list(&self, params: ShareTransactionPaginationParams) -> Result<ShareTransactionPaginatedResult>;
+    async fn list(
+        &self,
+        params: ShareTransactionPaginationParams,
+    ) -> Result<ShareTransactionPaginatedResult>;
 
     /// List share_transaction with pagination and filters
-    async fn list_with_filters(&self, params: ShareTransactionPaginationParams, filters: ShareTransactionFilter) -> Result<ShareTransactionPaginatedResult>;
+    async fn list_with_filters(
+        &self,
+        params: ShareTransactionPaginationParams,
+        filters: ShareTransactionFilter,
+    ) -> Result<ShareTransactionPaginatedResult>;
 
     /// Count all share_transaction entities
     async fn count(&self) -> Result<u64>;
@@ -117,7 +129,10 @@ pub trait ShareTransactionRepository: Send + Sync {
     async fn restore(&self, id: &str) -> Result<Option<ShareTransaction>>;
 
     /// List soft-deleted share_transaction entities
-    async fn list_deleted(&self, params: ShareTransactionPaginationParams) -> Result<ShareTransactionPaginatedResult>;
+    async fn list_deleted(
+        &self,
+        params: ShareTransactionPaginationParams,
+    ) -> Result<ShareTransactionPaginatedResult>;
 
     /// Empty trash (permanently delete all soft-deleted entities)
     async fn empty_trash(&self) -> Result<u64>;

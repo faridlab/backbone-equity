@@ -6,6 +6,10 @@
 //! per-(class,holder) position lock, and the register's TWO aggregation rules (4-layer rule: services
 //! orchestrate, repos hold SQL).
 //!
+//! Tenancy (ADR-0029): the SQL here carries no tenant key. The pool reads ride the request-dedicated
+//! connection when the composing service bound one (its fence variables govern what the RLS layer
+//! accepts) and fall back to a plain pool read otherwise.
+//!
 //! Thin newtype over `backbone_orm::GenericCrudRepository<ShareTransaction, backbone_orm::SoftDelete>`.
 //! All standard CRUD methods are available via `Deref`.
 
@@ -14,8 +18,6 @@ use chrono::NaiveDate;
 use rust_decimal::Decimal;
 use sqlx::{PgPool, Row};
 use uuid::Uuid;
-
-use backbone_orm::company_scope;
 
 use crate::domain::entity::ShareTransaction;
 
@@ -32,7 +34,9 @@ pub struct ShareTransactionRepository(
 
 impl std::ops::Deref for ShareTransactionRepository {
     type Target = backbone_orm::GenericCrudRepository<ShareTransaction, backbone_orm::SoftDelete>;
-    fn deref(&self) -> &Self::Target { &self.0 }
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
 }
 
 impl ShareTransactionRepository {
@@ -46,7 +50,6 @@ impl ShareTransactionRepository {
 /// hard-codes `'issue'` and `true` (the journal is posted before this row is written).
 pub struct NewIssueTxnRow<'a> {
     pub id: Uuid,
-    pub company_id: Uuid,
     pub share_class_id: Uuid,
     pub shareholder_id: Uuid,
     pub quantity: Decimal,
@@ -61,10 +64,9 @@ pub struct NewIssueTxnRow<'a> {
 /// A transfer is two rows sharing a `transfer_group_id`. `price_per_share`/`amount` are not fields —
 /// the INSERT hard-codes `0`: a transfer moves ownership, not money, and posts no journal
 /// (`gl_posted` is hard-coded `false`). `txn_type` binds as `&str` and is cast at the DB
-/// (`$5::share_txn_type`).
+/// (`$4::share_txn_type`).
 pub struct NewTransferLegRow<'a> {
     pub id: Uuid,
-    pub company_id: Uuid,
     pub share_class_id: Uuid,
     /// The holder this leg moves shares for.
     pub shareholder_id: Uuid,
@@ -81,7 +83,6 @@ pub struct NewTransferLegRow<'a> {
 /// The exact row a buyback movement writes. `txn_type`/`gl_posted` are hard-coded `'buyback'`/`true`.
 pub struct NewBuybackTxnRow {
     pub id: Uuid,
-    pub company_id: Uuid,
     pub share_class_id: Uuid,
     pub shareholder_id: Uuid,
     pub quantity: Decimal,
@@ -104,7 +105,8 @@ impl ShareTransactionRepository {
     /// Record an issue movement.
     ///
     /// Takes the CALLER'S connection so the movement and its outbox stage commit as one unit. The
-    /// caller has already bound the company on it (`bind_company_on`) — don't re-bind here.
+    /// caller has already propagated the ambient request scope onto it (`bind_org_scope_on`,
+    /// relay-only) — don't re-bind here.
     pub async fn insert_issue(
         &self,
         conn: &mut sqlx::PgConnection,
@@ -112,12 +114,18 @@ impl ShareTransactionRepository {
     ) -> Result<(), sqlx::Error> {
         sqlx::query(
             r#"INSERT INTO equity.share_transactions
-                 (id, company_id, share_class_id, shareholder_id, txn_type, quantity, price_per_share, amount,
+                 (id, share_class_id, shareholder_id, txn_type, quantity, price_per_share, amount,
                   posting_reference, txn_date, gl_posted)
-               VALUES ($1,$2,$3,$4,'issue'::share_txn_type,$5,$6,$7,$8,$9,true)"#,
+               VALUES ($1,$2,$3,'issue'::share_txn_type,$4,$5,$6,$7,$8,true)"#,
         )
-        .bind(i.id).bind(i.company_id).bind(i.share_class_id).bind(i.shareholder_id)
-        .bind(i.quantity).bind(i.price_per_share).bind(i.amount).bind(i.posting_reference).bind(i.txn_date)
+        .bind(i.id)
+        .bind(i.share_class_id)
+        .bind(i.shareholder_id)
+        .bind(i.quantity)
+        .bind(i.price_per_share)
+        .bind(i.amount)
+        .bind(i.posting_reference)
+        .bind(i.txn_date)
         .execute(conn)
         .await?;
         Ok(())
@@ -132,12 +140,18 @@ impl ShareTransactionRepository {
     ) -> Result<(), sqlx::Error> {
         sqlx::query(
             r#"INSERT INTO equity.share_transactions
-                 (id, company_id, share_class_id, shareholder_id, txn_type, quantity, price_per_share,
+                 (id, share_class_id, shareholder_id, txn_type, quantity, price_per_share,
                   amount, counterparty_shareholder_id, transfer_group_id, txn_date, gl_posted)
-               VALUES ($1,$2,$3,$4,$5::share_txn_type,$6,0,0,$7,$8,$9,false)"#,
+               VALUES ($1,$2,$3,$4::share_txn_type,$5,0,0,$6,$7,$8,false)"#,
         )
-        .bind(t.id).bind(t.company_id).bind(t.share_class_id).bind(t.shareholder_id).bind(t.txn_type)
-        .bind(t.quantity).bind(t.counterparty_shareholder_id).bind(t.transfer_group_id).bind(t.txn_date)
+        .bind(t.id)
+        .bind(t.share_class_id)
+        .bind(t.shareholder_id)
+        .bind(t.txn_type)
+        .bind(t.quantity)
+        .bind(t.counterparty_shareholder_id)
+        .bind(t.transfer_group_id)
+        .bind(t.txn_date)
         .execute(conn)
         .await?;
         Ok(())
@@ -151,32 +165,37 @@ impl ShareTransactionRepository {
     ) -> Result<(), sqlx::Error> {
         sqlx::query(
             r#"INSERT INTO equity.share_transactions
-                 (id, company_id, share_class_id, shareholder_id, txn_type, quantity, price_per_share, amount,
+                 (id, share_class_id, shareholder_id, txn_type, quantity, price_per_share, amount,
                   txn_date, gl_posted)
-               VALUES ($1,$2,$3,$4,'buyback'::share_txn_type,$5,$6,$7,$8,true)"#,
+               VALUES ($1,$2,$3,'buyback'::share_txn_type,$4,$5,$6,$7,true)"#,
         )
-        .bind(b.id).bind(b.company_id).bind(b.share_class_id).bind(b.shareholder_id)
-        .bind(b.quantity).bind(b.price_per_share).bind(b.amount).bind(b.txn_date)
+        .bind(b.id)
+        .bind(b.share_class_id)
+        .bind(b.shareholder_id)
+        .bind(b.quantity)
+        .bind(b.price_per_share)
+        .bind(b.amount)
+        .bind(b.txn_date)
         .execute(conn)
         .await?;
         Ok(())
     }
 
-    /// Take a per-(company, class, holder) advisory xact lock — serializes concurrent removals so a
+    /// Take a per-(class, holder) advisory xact lock — serializes concurrent removals so a
     /// [`Self::holding`] check and the movement insert that follows are atomic against another remover.
-    /// The holding is a SUM with no single row to lock, so an advisory lock is the guard.
+    /// The holding is a SUM with no single row to lock, so an advisory lock is the guard. Ids are
+    /// globally unique, so the (class, holder) pair needs no tenant column (ADR-0029).
     ///
     /// Takes the CALLER'S connection: an xact lock is released at commit, so it MUST be taken on the
     /// same transaction that writes the movement.
     pub async fn lock_position(
         &self,
         conn: &mut sqlx::PgConnection,
-        company_id: Uuid,
         class_id: Uuid,
         holder_id: Uuid,
     ) -> Result<(), sqlx::Error> {
         sqlx::query("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))")
-            .bind(format!("{company_id}:{class_id}:{holder_id}"))
+            .bind(format!("{class_id}:{holder_id}"))
             .execute(conn)
             .await?;
         Ok(())
@@ -185,81 +204,84 @@ impl ShareTransactionRepository {
     /// A holder's current position in a class = Σ (issue/transfer_in) − Σ (buyback/transfer_out).
     ///
     /// Takes the CALLER'S connection: this is the bounds check, and it must read under the same
-    /// transaction (and the same [`Self::lock_position`] lock) as the movement it guards. The caller
-    /// MUST have bound the company on that tx BEFORE calling this — an unbound read returns 0 through
-    /// the RLS fence, which reads as a real "holds nothing" and fails every removal as insufficient.
-    /// Don't re-bind here; the caller's bind covers it.
+    /// transaction (and the same [`Self::lock_position`] lock) as the movement it guards.
     pub async fn holding(
         &self,
         conn: &mut sqlx::PgConnection,
-        company_id: Uuid,
         class_id: Uuid,
         holder_id: Uuid,
     ) -> Result<Decimal, sqlx::Error> {
         sqlx::query_scalar(
             r#"SELECT COALESCE(SUM(CASE WHEN txn_type IN ('issue','transfer_in') THEN quantity ELSE -quantity END),0)
                FROM equity.share_transactions
-               WHERE company_id=$1 AND share_class_id=$2 AND shareholder_id=$3 AND (metadata->>'deleted_at') IS NULL"#,
+               WHERE share_class_id=$1 AND shareholder_id=$2 AND (metadata->>'deleted_at') IS NULL"#,
         )
-        .bind(company_id).bind(class_id).bind(holder_id)
+        .bind(class_id).bind(holder_id)
         .fetch_one(conn)
         .await
     }
 
     /// Shares outstanding for a class = Σ issued − Σ bought back (transfers net to zero across holders).
     ///
-    /// Runs on the pool via `fetch_one_scalar_scoped`. The caller wraps this in
-    /// `with_company_scope(Some(company))` — the company is on the parameter, and that scope is
-    /// load-bearing: a bare-pool read returns 0 through the fence, which would read as a real "no
-    /// shares outstanding" and wrongly refuse every dividend.
+    /// Runs on the pool through the tenant-agnostic scoped read: it rides the request-dedicated
+    /// connection when the composing service bound one — under a decorated deployment a bare-pool
+    /// read would land on a fresh connection with no fence variables and return 0, which would read
+    /// as a real "no shares outstanding" and wrongly refuse every dividend — and falls back to a
+    /// plain pool read otherwise.
     pub async fn shares_outstanding(
         &self,
         pool: &PgPool,
-        company_id: Uuid,
         class_id: Uuid,
     ) -> Result<Decimal, sqlx::Error> {
-        company_scope::fetch_one_scalar_scoped(
+        let row = backbone_orm::org_scope::fetch_optional_row_scoped(
             pool,
-            sqlx::query_scalar(
+            sqlx::query(
                 r#"SELECT COALESCE(SUM(CASE WHEN txn_type='issue' THEN quantity
-                                            WHEN txn_type='buyback' THEN -quantity ELSE 0 END),0)
+                                            WHEN txn_type='buyback' THEN -quantity ELSE 0 END),0) AS outstanding
                    FROM equity.share_transactions
-                   WHERE company_id=$1 AND share_class_id=$2 AND (metadata->>'deleted_at') IS NULL"#,
+                   WHERE share_class_id=$1 AND (metadata->>'deleted_at') IS NULL"#,
             )
-            .bind(company_id).bind(class_id),
+            .bind(class_id),
         )
-        .await
+        .await?;
+        // COALESCE guarantees exactly one row.
+        Ok(row.map(|r| r.get("outstanding")).unwrap_or(Decimal::ZERO))
     }
 
     /// Every holder's non-zero position in a class, largest first.
     ///
-    /// Runs on the pool via `fetch_all_rows_scoped`; the caller wraps this in
-    /// `with_company_scope(Some(company))` so the cap-table read is fenced (and returns rows) for
-    /// request and non-request callers alike.
+    /// Runs on the pool through `fetch_all_rows_scoped`: it rides the request-dedicated connection
+    /// when the composing service bound one — under a decorated deployment a bare-pool read would
+    /// land on a fresh connection with no fence variables and return nothing — and falls back to a
+    /// plain pool read otherwise. (The legacy company_scope helper's task-local branch is never
+    /// taken: a stripped module sets no legacy scope. The tenant-agnostic `org_scope` module has no
+    /// fetch-all twin yet; when it gains one, this call should move to it.)
     pub async fn holdings(
         &self,
         pool: &PgPool,
-        company_id: Uuid,
         class_id: Uuid,
     ) -> Result<Vec<HoldingRow>, sqlx::Error> {
-        let rows = company_scope::fetch_all_rows_scoped(
+        let rows = backbone_orm::company_scope::fetch_all_rows_scoped(
             pool,
             sqlx::query(
                 r#"SELECT shareholder_id,
                           COALESCE(SUM(CASE WHEN txn_type IN ('issue','transfer_in') THEN quantity ELSE -quantity END),0) AS qty
                    FROM equity.share_transactions
-                   WHERE company_id=$1 AND share_class_id=$2 AND (metadata->>'deleted_at') IS NULL
+                   WHERE share_class_id=$1 AND (metadata->>'deleted_at') IS NULL
                    GROUP BY shareholder_id HAVING
                      COALESCE(SUM(CASE WHEN txn_type IN ('issue','transfer_in') THEN quantity ELSE -quantity END),0) <> 0
                    ORDER BY qty DESC"#,
             )
-            .bind(company_id).bind(class_id),
+            .bind(class_id),
         )
         .await?;
-        Ok(rows.iter().map(|r| HoldingRow {
-            shareholder_id: r.get("shareholder_id"),
-            quantity: r.get("qty"),
-        }).collect())
+        Ok(rows
+            .iter()
+            .map(|r| HoldingRow {
+                shareholder_id: r.get("shareholder_id"),
+                quantity: r.get("qty"),
+            })
+            .collect())
     }
 }
 

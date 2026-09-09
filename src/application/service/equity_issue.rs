@@ -8,7 +8,6 @@
 //! `ShareTransactionRepository`, which takes this service's transaction so the register move + its
 //! outbox stage commit together.
 
-use backbone_orm::company_scope;
 use rust_decimal::Decimal;
 use uuid::Uuid;
 
@@ -16,7 +15,9 @@ use crate::infrastructure::persistence::NewIssueTxnRow;
 
 use super::equity_events::{EquityEvent, EquityEventSink};
 use super::equity_gl::{GlPostLine, GlPostSink};
-use super::equity_write_service::{EquityError, EquityWriteService, IssueShares, PostOutcome, stage};
+use super::equity_write_service::{
+    stage, EquityError, EquityWriteService, IssueShares, PostOutcome,
+};
 
 impl EquityWriteService {
     /// Issue new shares to a holder: capital booked at par, the excess to share premium. Refuses an issue
@@ -32,7 +33,9 @@ impl EquityWriteService {
         }
         let class = self.load_class(i.share_class_id).await?;
         if i.price_per_share < class.par_value {
-            return Err(EquityError::Invalid("issue price is below par value".into()));
+            return Err(EquityError::Invalid(
+                "issue price is below par value".into(),
+            ));
         }
         let amount = i.quantity * i.price_per_share;
         let capital = i.quantity * class.par_value;
@@ -42,36 +45,64 @@ impl EquityWriteService {
         // Post the balanced capital journal first (the external effect), then record the movement in a tx.
         let mut lines = vec![
             GlPostLine::debit(i.bank_account_id, amount).with_description("Share issue — cash in"),
-            GlPostLine::credit(class.share_capital_account_id, capital).with_description("Share capital at par"),
+            GlPostLine::credit(class.share_capital_account_id, capital)
+                .with_description("Share capital at par"),
         ];
         if premium > Decimal::ZERO {
-            lines.push(GlPostLine::credit(class.share_premium_account_id, premium).with_description("Share premium"));
+            lines.push(
+                GlPostLine::credit(class.share_premium_account_id, premium)
+                    .with_description("Share premium"),
+            );
         }
-        let ack = self.post(sink, &i.company_id, "issue", txn_id, i.txn_date, i.reference.clone(), "Share issue", lines).await?;
+        let ack = self
+            .post(
+                sink,
+                "issue",
+                txn_id,
+                i.txn_date,
+                i.reference.clone(),
+                "Share issue",
+                lines,
+            )
+            .await?;
 
-        // RLS scope (ADR-0008): the company is on the DTO — bind it explicitly onto our own tx, so the
-        // register movement and its outbox stage are fenced for request and job callers alike.
+        // Propagate the ambient request scope onto our own tx (relay-only): the register movement and
+        // its outbox stage run on a fresh connection the composing service's fence does not decorate.
+        // Unfenced deployments have no ambient scope and skip this entirely.
         let mut tx = self.pool.begin().await?;
-        company_scope::bind_company_on(&mut tx, i.company_id).await?;
-        self.transactions.insert_issue(&mut tx, &NewIssueTxnRow {
-            id: txn_id,
-            company_id: i.company_id,
+        if let Some(scope) = backbone_orm::org_scope::current_org_scope() {
+            backbone_orm::org_scope::bind_org_scope_on(&mut *tx, &scope).await?;
+        }
+        self.transactions
+            .insert_issue(
+                &mut tx,
+                &NewIssueTxnRow {
+                    id: txn_id,
+                    share_class_id: i.share_class_id,
+                    shareholder_id: i.shareholder_id,
+                    quantity: i.quantity,
+                    price_per_share: i.price_per_share,
+                    amount,
+                    posting_reference: i.reference.as_deref(),
+                    txn_date: i.txn_date,
+                },
+            )
+            .await?;
+
+        let event = EquityEvent::SharesIssued {
+            transaction_id: txn_id,
             share_class_id: i.share_class_id,
             shareholder_id: i.shareholder_id,
             quantity: i.quantity,
-            price_per_share: i.price_per_share,
             amount,
-            posting_reference: i.reference.as_deref(),
-            txn_date: i.txn_date,
-        }).await?;
-
-        let event = EquityEvent::SharesIssued {
-            transaction_id: txn_id, company_id: i.company_id, share_class_id: i.share_class_id,
-            shareholder_id: i.shareholder_id, quantity: i.quantity, amount,
         };
         stage(&mut tx, "SharesIssued", "ShareTransaction", txn_id, &event).await?;
         tx.commit().await?;
         events.publish(&event);
-        Ok(PostOutcome { id: txn_id, journal_id: Some(ack.journal_id), amount })
+        Ok(PostOutcome {
+            id: txn_id,
+            journal_id: Some(ack.journal_id),
+            amount,
+        })
     }
 }

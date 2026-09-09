@@ -1491,7 +1491,6 @@ components:
       type: object
       required:
         - id
-        - company_id
         - share_class_id
         - declaration_date
         - per_share_amount
@@ -1503,9 +1502,6 @@ components:
         - metadata
       properties:
         id:
-          type: string
-          format: uuid
-        company_id:
           type: string
           format: uuid
         share_class_id:
@@ -1551,7 +1547,6 @@ components:
     CreateDividendRequest:
       type: object
       required:
-        - company_id
         - share_class_id
         - declaration_date
         - per_share_amount
@@ -1562,9 +1557,6 @@ components:
         - dividend_payable_account_id
         - metadata
       properties:
-        company_id:
-          type: string
-          format: uuid
         share_class_id:
           type: string
           format: uuid
@@ -1595,7 +1587,6 @@ components:
     UpdateDividendRequest:
       type: object
       required:
-        - company_id
         - share_class_id
         - declaration_date
         - per_share_amount
@@ -1606,9 +1597,6 @@ components:
         - dividend_payable_account_id
         - metadata
       properties:
-        company_id:
-          type: string
-          format: uuid
         share_class_id:
           type: string
           format: uuid
@@ -1639,9 +1627,6 @@ components:
     PatchDividendRequest:
       type: object
       properties:
-        company_id:
-          type: string
-          format: uuid
         share_class_id:
           type: string
           format: uuid
@@ -1683,7 +1668,6 @@ components:
       type: object
       required:
         - id
-        - company_id
         - code
         - name
         - par_value
@@ -1694,9 +1678,6 @@ components:
         - metadata
       properties:
         id:
-          type: string
-          format: uuid
-        company_id:
           type: string
           format: uuid
         code:
@@ -1737,7 +1718,6 @@ components:
     CreateShareClassRequest:
       type: object
       required:
-        - company_id
         - code
         - name
         - par_value
@@ -1747,9 +1727,6 @@ components:
         - status
         - metadata
       properties:
-        company_id:
-          type: string
-          format: uuid
         code:
           type: string
           maxLength: 40
@@ -1775,7 +1752,6 @@ components:
     UpdateShareClassRequest:
       type: object
       required:
-        - company_id
         - code
         - name
         - par_value
@@ -1785,9 +1761,6 @@ components:
         - status
         - metadata
       properties:
-        company_id:
-          type: string
-          format: uuid
         code:
           type: string
           maxLength: 40
@@ -1813,9 +1786,6 @@ components:
     PatchShareClassRequest:
       type: object
       properties:
-        company_id:
-          type: string
-          format: uuid
         code:
           type: string
           maxLength: 40
@@ -1852,15 +1822,11 @@ components:
       type: object
       required:
         - id
-        - company_id
         - name
         - holder_type
         - metadata
       properties:
         id:
-          type: string
-          format: uuid
-        company_id:
           type: string
           format: uuid
         party_id:
@@ -1891,14 +1857,10 @@ components:
     CreateShareholderRequest:
       type: object
       required:
-        - company_id
         - name
         - holder_type
         - metadata
       properties:
-        company_id:
-          type: string
-          format: uuid
         party_id:
           nullable: true
           type: string
@@ -1914,14 +1876,10 @@ components:
     UpdateShareholderRequest:
       type: object
       required:
-        - company_id
         - name
         - holder_type
         - metadata
       properties:
-        company_id:
-          type: string
-          format: uuid
         party_id:
           nullable: true
           type: string
@@ -1937,9 +1895,6 @@ components:
     PatchShareholderRequest:
       type: object
       properties:
-        company_id:
-          type: string
-          format: uuid
         party_id:
           nullable: true
           type: string
@@ -1966,7 +1921,6 @@ components:
       type: object
       required:
         - id
-        - company_id
         - share_class_id
         - shareholder_id
         - txn_type
@@ -1978,9 +1932,6 @@ components:
         - metadata
       properties:
         id:
-          type: string
-          format: uuid
-        company_id:
           type: string
           format: uuid
         share_class_id:
@@ -2033,7 +1984,6 @@ components:
     CreateShareTransactionRequest:
       type: object
       required:
-        - company_id
         - share_class_id
         - shareholder_id
         - txn_type
@@ -2044,9 +1994,6 @@ components:
         - gl_posted
         - metadata
       properties:
-        company_id:
-          type: string
-          format: uuid
         share_class_id:
           type: string
           format: uuid
@@ -2084,7 +2031,6 @@ components:
     UpdateShareTransactionRequest:
       type: object
       required:
-        - company_id
         - share_class_id
         - shareholder_id
         - txn_type
@@ -2095,9 +2041,6 @@ components:
         - gl_posted
         - metadata
       properties:
-        company_id:
-          type: string
-          format: uuid
         share_class_id:
           type: string
           format: uuid
@@ -2135,9 +2078,6 @@ components:
     PatchShareTransactionRequest:
       type: object
       properties:
-        company_id:
-          type: string
-          format: uuid
         share_class_id:
           type: string
           format: uuid

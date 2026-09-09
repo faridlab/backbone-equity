@@ -5,11 +5,11 @@
 //! This trait defines the repository contract for the Shareholder aggregate.
 //! Implementation is in the infrastructure layer.
 
-use async_trait::async_trait;
 use anyhow::Result;
+use async_trait::async_trait;
 use uuid::Uuid;
 
-use crate::domain::entity::{Shareholder, HolderType};
+use crate::domain::entity::{HolderType, Shareholder};
 
 /// Pagination parameters for list queries
 #[derive(Debug, Clone, Default)]
@@ -44,7 +44,6 @@ pub struct ShareholderPaginatedResult {
 /// Filter parameters for list queries
 #[derive(Debug, Clone, Default)]
 pub struct ShareholderFilter {
-    pub company_id: Option<Uuid>,
     pub party_id: Option<Uuid>,
     pub name: Option<String>,
     pub holder_type: Option<HolderType>,
@@ -53,7 +52,7 @@ pub struct ShareholderFilter {
 impl ShareholderFilter {
     /// Check if any filter is set
     pub fn has_filters(&self) -> bool {
-        self.company_id.is_some() || self.party_id.is_some() || self.name.is_some() || self.holder_type.is_some()
+        self.party_id.is_some() || self.name.is_some() || self.holder_type.is_some()
     }
 }
 
@@ -63,7 +62,6 @@ impl ShareholderFilter {
 /// Implementations should be in the infrastructure layer.
 #[async_trait]
 pub trait ShareholderRepository: Send + Sync {
-
     // =========================================================================
     // Core CRUD Operations
     // =========================================================================
@@ -88,10 +86,15 @@ pub trait ShareholderRepository: Send + Sync {
     // =========================================================================
 
     /// List shareholder with pagination
-    async fn list(&self, params: ShareholderPaginationParams) -> Result<ShareholderPaginatedResult>;
+    async fn list(&self, params: ShareholderPaginationParams)
+        -> Result<ShareholderPaginatedResult>;
 
     /// List shareholder with pagination and filters
-    async fn list_with_filters(&self, params: ShareholderPaginationParams, filters: ShareholderFilter) -> Result<ShareholderPaginatedResult>;
+    async fn list_with_filters(
+        &self,
+        params: ShareholderPaginationParams,
+        filters: ShareholderFilter,
+    ) -> Result<ShareholderPaginatedResult>;
 
     /// Count all shareholder entities
     async fn count(&self) -> Result<u64>;
@@ -113,7 +116,10 @@ pub trait ShareholderRepository: Send + Sync {
     async fn restore(&self, id: &str) -> Result<Option<Shareholder>>;
 
     /// List soft-deleted shareholder entities
-    async fn list_deleted(&self, params: ShareholderPaginationParams) -> Result<ShareholderPaginatedResult>;
+    async fn list_deleted(
+        &self,
+        params: ShareholderPaginationParams,
+    ) -> Result<ShareholderPaginatedResult>;
 
     /// Empty trash (permanently delete all soft-deleted entities)
     async fn empty_trash(&self) -> Result<u64>;

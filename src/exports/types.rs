@@ -5,11 +5,11 @@
 //! These DTOs are the ONLY types other modules should use.
 //! They are decoupled from internal domain entities.
 
+use crate::domain::entity::*;
+use chrono::{DateTime, NaiveDate, Utc};
+use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use chrono::{DateTime, Utc, NaiveDate};
-use rust_decimal::Decimal;
-use crate::domain::entity::*;
 
 // ============================================================================
 // DIVIDEND TYPES
@@ -49,7 +49,6 @@ impl From<DividendId> for Uuid {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DividendDto {
     pub id: DividendId,
-    pub company_id: Uuid,
     pub share_class_id: Uuid,
     pub declaration_date: NaiveDate,
     pub payment_date: Option<NaiveDate>,
@@ -113,7 +112,6 @@ impl From<ShareClassId> for Uuid {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ShareClassDto {
     pub id: ShareClassId,
-    pub company_id: Uuid,
     pub code: String,
     pub name: String,
     pub par_value: Decimal,
@@ -176,7 +174,6 @@ impl From<ShareholderId> for Uuid {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ShareholderDto {
     pub id: ShareholderId,
-    pub company_id: Uuid,
     pub party_id: Option<Uuid>,
     pub name: String,
     pub holder_type: HolderType,
@@ -234,7 +231,6 @@ impl From<ShareTransactionId> for Uuid {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ShareTransactionDto {
     pub id: ShareTransactionId,
-    pub company_id: Uuid,
     pub share_class_id: Uuid,
     pub shareholder_id: Uuid,
     pub txn_type: ShareTxnType,

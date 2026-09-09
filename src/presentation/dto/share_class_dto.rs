@@ -5,10 +5,10 @@
 //! DTOs provide a clean separation between domain entities and API
 //! representations, with validation and OpenAPI documentation support.
 
-use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
+use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 #[cfg(feature = "openapi")]
 #[cfg(feature = "openapi")]
@@ -17,8 +17,8 @@ use utoipa::ToSchema;
 #[cfg(feature = "validation")]
 use validator::Validate;
 
-use crate::domain::entity::ShareClass;
 use crate::domain::entity::AuditMetadata;
+use crate::domain::entity::ShareClass;
 use crate::domain::entity::ShareClassStatus;
 
 // =============================================================================
@@ -34,9 +34,6 @@ use crate::domain::entity::ShareClassStatus;
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct CreateShareClassDto {
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
-    #[serde(alias = "company_id")]
-    pub company_id: Uuid,
     #[cfg_attr(feature = "validation", validate(length(max = 40)))]
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     pub code: String,
@@ -48,10 +45,16 @@ pub struct CreateShareClassDto {
     #[cfg_attr(feature = "validation", validate(length(max = 3)))]
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     pub currency: String,
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
+    #[cfg_attr(
+        feature = "openapi",
+        schema(example = "550e8400-e29b-41d4-a716-446655440000")
+    )]
     #[serde(alias = "share_capital_account_id")]
     pub share_capital_account_id: Uuid,
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
+    #[cfg_attr(
+        feature = "openapi",
+        schema(example = "550e8400-e29b-41d4-a716-446655440000")
+    )]
     #[serde(alias = "share_premium_account_id")]
     pub share_premium_account_id: Uuid,
     pub status: ShareClassStatus,
@@ -70,9 +73,6 @@ pub struct CreateShareClassDto {
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateShareClassDto {
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
-    #[serde(alias = "company_id")]
-    pub company_id: Uuid,
     #[cfg_attr(feature = "validation", validate(length(max = 40)))]
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     pub code: String,
@@ -84,10 +84,16 @@ pub struct UpdateShareClassDto {
     #[cfg_attr(feature = "validation", validate(length(max = 3)))]
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     pub currency: String,
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
+    #[cfg_attr(
+        feature = "openapi",
+        schema(example = "550e8400-e29b-41d4-a716-446655440000")
+    )]
     #[serde(alias = "share_capital_account_id")]
     pub share_capital_account_id: Uuid,
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
+    #[cfg_attr(
+        feature = "openapi",
+        schema(example = "550e8400-e29b-41d4-a716-446655440000")
+    )]
     #[serde(alias = "share_premium_account_id")]
     pub share_premium_account_id: Uuid,
     pub status: ShareClassStatus,
@@ -106,9 +112,6 @@ pub struct UpdateShareClassDto {
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct PatchShareClassDto {
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
-    #[serde(skip_serializing_if = "Option::is_none", alias = "company_id")]
-    pub company_id: Option<Uuid>,
     #[cfg_attr(feature = "validation", validate(length(max = 40)))]
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -123,11 +126,23 @@ pub struct PatchShareClassDto {
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub currency: Option<String>,
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
-    #[serde(skip_serializing_if = "Option::is_none", alias = "share_capital_account_id")]
+    #[cfg_attr(
+        feature = "openapi",
+        schema(example = "550e8400-e29b-41d4-a716-446655440000")
+    )]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        alias = "share_capital_account_id"
+    )]
     pub share_capital_account_id: Option<Uuid>,
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
-    #[serde(skip_serializing_if = "Option::is_none", alias = "share_premium_account_id")]
+    #[cfg_attr(
+        feature = "openapi",
+        schema(example = "550e8400-e29b-41d4-a716-446655440000")
+    )]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        alias = "share_premium_account_id"
+    )]
     pub share_premium_account_id: Option<Uuid>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub status: Option<ShareClassStatus>,
@@ -136,7 +151,13 @@ pub struct PatchShareClassDto {
 impl PatchShareClassDto {
     /// Check if any field is set
     pub fn has_changes(&self) -> bool {
-        self.company_id.is_some() || self.code.is_some() || self.name.is_some() || self.par_value.is_some() || self.currency.is_some() || self.share_capital_account_id.is_some() || self.share_premium_account_id.is_some() || self.status.is_some()
+        self.code.is_some()
+            || self.name.is_some()
+            || self.par_value.is_some()
+            || self.currency.is_some()
+            || self.share_capital_account_id.is_some()
+            || self.share_premium_account_id.is_some()
+            || self.status.is_some()
     }
 }
 
@@ -152,10 +173,11 @@ impl PatchShareClassDto {
 #[cfg_attr(feature = "openapi", derive(ToSchema))]
 #[serde(rename_all = "camelCase")]
 pub struct ShareClassResponseDto {
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
+    #[cfg_attr(
+        feature = "openapi",
+        schema(example = "550e8400-e29b-41d4-a716-446655440000")
+    )]
     pub id: Uuid,
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
-    pub company_id: Uuid,
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     pub code: String,
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
@@ -163,9 +185,15 @@ pub struct ShareClassResponseDto {
     pub par_value: Decimal,
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     pub currency: String,
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
+    #[cfg_attr(
+        feature = "openapi",
+        schema(example = "550e8400-e29b-41d4-a716-446655440000")
+    )]
     pub share_capital_account_id: Uuid,
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
+    #[cfg_attr(
+        feature = "openapi",
+        schema(example = "550e8400-e29b-41d4-a716-446655440000")
+    )]
     pub share_premium_account_id: Uuid,
     pub status: ShareClassStatus,
     pub metadata: AuditMetadata,
@@ -225,9 +253,9 @@ impl ShareClassListResponseDto {
 #[serde(rename_all = "camelCase")]
 pub struct ShareClassSummaryDto {
     pub id: Uuid,
-    pub company_id: Uuid,
     pub code: String,
     pub name: String,
+    pub par_value: Decimal,
     pub created_at: Option<DateTime<Utc>>,
 }
 
@@ -239,7 +267,6 @@ impl From<ShareClass> for ShareClassResponseDto {
     fn from(entity: ShareClass) -> Self {
         Self {
             id: entity.id,
-            company_id: entity.company_id,
             code: entity.code,
             name: entity.name,
             par_value: entity.par_value,
@@ -257,9 +284,9 @@ impl From<ShareClass> for ShareClassSummaryDto {
         let created_at = backbone_core::PersistentEntity::created_at(&entity);
         Self {
             id: entity.id,
-            company_id: entity.company_id,
             code: entity.code,
             name: entity.name,
+            par_value: entity.par_value,
             created_at,
         }
     }
@@ -269,7 +296,6 @@ impl From<CreateShareClassDto> for ShareClass {
     fn from(dto: CreateShareClassDto) -> Self {
         Self {
             id: Uuid::new_v4(),
-            company_id: dto.company_id,
             code: dto.code,
             name: dto.name,
             par_value: dto.par_value,
@@ -286,7 +312,6 @@ impl From<&ShareClass> for ShareClassResponseDto {
     fn from(entity: &ShareClass) -> Self {
         Self {
             id: entity.id.clone(),
-            company_id: entity.company_id.clone(),
             code: entity.code.clone(),
             name: entity.name.clone(),
             par_value: entity.par_value.clone(),
@@ -307,7 +332,6 @@ impl backbone_core::FromCreateDto<CreateShareClassDto> for ShareClass {
 
 impl backbone_core::ApplyUpdateDto<UpdateShareClassDto> for ShareClass {
     fn apply_update(mut self, dto: UpdateShareClassDto) -> backbone_core::ServiceResult<Self> {
-        self.company_id = dto.company_id;
         self.code = dto.code;
         self.name = dto.name;
         self.par_value = dto.par_value;

@@ -8,7 +8,6 @@
 //! buyback insert live on `ShareTransactionRepository`, which takes this service's transaction so the
 //! register move + its journal commit together.
 
-use backbone_orm::company_scope;
 use rust_decimal::Decimal;
 use uuid::Uuid;
 
@@ -16,7 +15,9 @@ use crate::infrastructure::persistence::NewBuybackTxnRow;
 
 use super::equity_events::{EquityEvent, EquityEventSink};
 use super::equity_gl::{GlPostLine, GlPostSink};
-use super::equity_write_service::{BuybackShares, EquityError, EquityWriteService, PostOutcome, stage};
+use super::equity_write_service::{
+    stage, BuybackShares, EquityError, EquityWriteService, PostOutcome,
+};
 
 impl EquityWriteService {
     /// Buy shares back from a holder: Dr Share Capital (par) · Dr Retained Earnings (excess of price over par)
@@ -36,43 +37,92 @@ impl EquityWriteService {
         let excess = amount - capital; // premium paid on buyback → Retained Earnings (if price > par)
         let txn_id = Uuid::new_v4();
 
-        // RLS scope (ADR-0008): company on the DTO — bind it before the holding read (see `transfer_shares`).
+        // Propagate the ambient request scope onto our own tx (relay-only) BEFORE the holding read,
+        // so under a decorated deployment the bounds check sees what the caller's fence allows
+        // (see `transfer_shares`). Unfenced deployments have no ambient scope and skip this.
         let mut tx = self.pool.begin().await?;
-        company_scope::bind_company_on(&mut tx, b.company_id).await?;
-        self.transactions.lock_position(&mut tx, b.company_id, b.share_class_id, b.shareholder_id).await?;
-        let held = self.transactions.holding(&mut tx, b.company_id, b.share_class_id, b.shareholder_id).await?;
-        if b.quantity > held {
-            return Err(EquityError::InsufficientShares { held, requested: b.quantity });
+        if let Some(scope) = backbone_orm::org_scope::current_org_scope() {
+            backbone_orm::org_scope::bind_org_scope_on(&mut *tx, &scope).await?;
         }
-        self.transactions.insert_buyback(&mut tx, &NewBuybackTxnRow {
-            id: txn_id,
-            company_id: b.company_id,
+        self.transactions
+            .lock_position(&mut tx, b.share_class_id, b.shareholder_id)
+            .await?;
+        let held = self
+            .transactions
+            .holding(&mut tx, b.share_class_id, b.shareholder_id)
+            .await?;
+        if b.quantity > held {
+            return Err(EquityError::InsufficientShares {
+                held,
+                requested: b.quantity,
+            });
+        }
+        self.transactions
+            .insert_buyback(
+                &mut tx,
+                &NewBuybackTxnRow {
+                    id: txn_id,
+                    share_class_id: b.share_class_id,
+                    shareholder_id: b.shareholder_id,
+                    quantity: b.quantity,
+                    price_per_share: b.price_per_share,
+                    amount,
+                    txn_date: b.txn_date,
+                },
+            )
+            .await?;
+
+        // Post while still holding the lock (the register move + its journal commit together).
+        let mut lines = vec![GlPostLine::debit(class.share_capital_account_id, capital)
+            .with_description("Share capital retired")];
+        if excess > Decimal::ZERO {
+            lines.push(
+                GlPostLine::debit(b.retained_earnings_account_id, excess)
+                    .with_description("Buyback premium"),
+            );
+        } else if excess < Decimal::ZERO {
+            // Bought back below par — the gain credits retained earnings.
+            lines.push(
+                GlPostLine::credit(b.retained_earnings_account_id, -excess)
+                    .with_description("Buyback discount"),
+            );
+        }
+        lines.push(
+            GlPostLine::credit(b.bank_account_id, amount).with_description("Buyback — cash out"),
+        );
+        let ack = self
+            .post(
+                sink,
+                "buyback",
+                txn_id,
+                b.txn_date,
+                None,
+                "Share buyback",
+                lines,
+            )
+            .await?;
+
+        let event = EquityEvent::SharesBoughtBack {
+            transaction_id: txn_id,
             share_class_id: b.share_class_id,
             shareholder_id: b.shareholder_id,
             quantity: b.quantity,
-            price_per_share: b.price_per_share,
             amount,
-            txn_date: b.txn_date,
-        }).await?;
-
-        // Post while still holding the lock (the register move + its journal commit together).
-        let mut lines = vec![GlPostLine::debit(class.share_capital_account_id, capital).with_description("Share capital retired")];
-        if excess > Decimal::ZERO {
-            lines.push(GlPostLine::debit(b.retained_earnings_account_id, excess).with_description("Buyback premium"));
-        } else if excess < Decimal::ZERO {
-            // Bought back below par — the gain credits retained earnings.
-            lines.push(GlPostLine::credit(b.retained_earnings_account_id, -excess).with_description("Buyback discount"));
-        }
-        lines.push(GlPostLine::credit(b.bank_account_id, amount).with_description("Buyback — cash out"));
-        let ack = self.post(sink, &b.company_id, "buyback", txn_id, b.txn_date, None, "Share buyback", lines).await?;
-
-        let event = EquityEvent::SharesBoughtBack {
-            transaction_id: txn_id, company_id: b.company_id, share_class_id: b.share_class_id,
-            shareholder_id: b.shareholder_id, quantity: b.quantity, amount,
         };
-        stage(&mut tx, "SharesBoughtBack", "ShareTransaction", txn_id, &event).await?;
+        stage(
+            &mut tx,
+            "SharesBoughtBack",
+            "ShareTransaction",
+            txn_id,
+            &event,
+        )
+        .await?;
         tx.commit().await?;
         events.publish(&event);
-        Ok(PostOutcome { id: txn_id, journal_id: Some(ack.journal_id), amount })
+        Ok(PostOutcome {
+            id: txn_id,
+            journal_id: Some(ack.journal_id),
+            amount,
+        })
     }
 }

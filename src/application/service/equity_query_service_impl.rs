@@ -2,9 +2,9 @@
 //! user-owned; survives regen). Proves the contract is realizable: each read goes through the entity
 //! repository and maps the storage entity to its DTO.
 //!
-//! Reads respect the **ambient company scope** (RLS): the trait takes only an id — by design — so the
-//! caller (composing backend-service or test) must set `app.company_id` via `backbone_orm::company_scope`
-//! for the read to see the row. This mirrors how the validated write surface scopes its own reads.
+//! Reads are ID-only by design. Under a decorated deployment the entity repository's scoped reads
+//! ride the request-dedicated connection, so a row the caller's fence excludes is simply not found;
+//! with no scope bound they are plain lookups (ADR-0029: the module carries no tenancy of its own).
 //!
 //! Gated behind `unstable-write-service` alongside the trait: this is a reference impl + composition
 //! proof, not a deployed service. A composing service may provide its own impl.
@@ -13,14 +13,14 @@ use anyhow::Result;
 use async_trait::async_trait;
 use sqlx::PgPool;
 
-use crate::domain::entity::{AuditMetadata, Dividend, ShareClass, Shareholder, ShareTransaction};
+use crate::domain::entity::{AuditMetadata, Dividend, ShareClass, ShareTransaction, Shareholder};
 use crate::exports::{
     DividendDto, DividendId, DividendSummary, EquityQueryService, ShareClassDto, ShareClassId,
     ShareClassSummary, ShareTransactionDto, ShareTransactionId, ShareTransactionSummary,
     ShareholderDto, ShareholderId, ShareholderSummary,
 };
 use crate::infrastructure::persistence::{
-    DividendRepository, ShareClassRepository, ShareholderRepository, ShareTransactionRepository,
+    DividendRepository, ShareClassRepository, ShareTransactionRepository, ShareholderRepository,
 };
 
 /// Reference `EquityQueryService` over the four entity repositories.
@@ -52,7 +52,6 @@ impl EquityQueryService for EquityQueryServiceImpl {
         let e: Option<Dividend> = self.dividends.find_by_id(&id.0.to_string()).await?;
         Ok(e.map(|e| DividendDto {
             id: DividendId(e.id),
-            company_id: e.company_id,
             share_class_id: e.share_class_id,
             declaration_date: e.declaration_date,
             payment_date: e.payment_date,
@@ -68,7 +67,10 @@ impl EquityQueryService for EquityQueryServiceImpl {
 
     async fn get_dividend_summary(&self, id: DividendId) -> Result<Option<DividendSummary>> {
         let e: Option<Dividend> = self.dividends.find_by_id(&id.0.to_string()).await?;
-        Ok(e.map(|e| DividendSummary { id: DividendId(e.id), status: e.status }))
+        Ok(e.map(|e| DividendSummary {
+            id: DividendId(e.id),
+            status: e.status,
+        }))
     }
 
     async fn dividend_exists(&self, id: DividendId) -> Result<bool> {
@@ -79,7 +81,6 @@ impl EquityQueryService for EquityQueryServiceImpl {
         let e: Option<ShareClass> = self.share_classes.find_by_id(&id.0.to_string()).await?;
         Ok(e.map(|e| ShareClassDto {
             id: ShareClassId(e.id),
-            company_id: e.company_id,
             code: e.code,
             name: e.name,
             par_value: e.par_value,
@@ -93,7 +94,11 @@ impl EquityQueryService for EquityQueryServiceImpl {
 
     async fn get_share_class_summary(&self, id: ShareClassId) -> Result<Option<ShareClassSummary>> {
         let e: Option<ShareClass> = self.share_classes.find_by_id(&id.0.to_string()).await?;
-        Ok(e.map(|e| ShareClassSummary { id: ShareClassId(e.id), name: e.name }))
+        Ok(e.map(|e| ShareClassSummary {
+            id: ShareClassId(e.id),
+            name: e.name,
+            status: e.status,
+        }))
     }
 
     async fn share_class_exists(&self, id: ShareClassId) -> Result<bool> {
@@ -104,7 +109,6 @@ impl EquityQueryService for EquityQueryServiceImpl {
         let e: Option<Shareholder> = self.shareholders.find_by_id(&id.0.to_string()).await?;
         Ok(e.map(|e| ShareholderDto {
             id: ShareholderId(e.id),
-            company_id: e.company_id,
             party_id: e.party_id,
             name: e.name,
             holder_type: e.holder_type,
@@ -112,20 +116,28 @@ impl EquityQueryService for EquityQueryServiceImpl {
         }))
     }
 
-    async fn get_shareholder_summary(&self, id: ShareholderId) -> Result<Option<ShareholderSummary>> {
+    async fn get_shareholder_summary(
+        &self,
+        id: ShareholderId,
+    ) -> Result<Option<ShareholderSummary>> {
         let e: Option<Shareholder> = self.shareholders.find_by_id(&id.0.to_string()).await?;
-        Ok(e.map(|e| ShareholderSummary { id: ShareholderId(e.id), name: e.name }))
+        Ok(e.map(|e| ShareholderSummary {
+            id: ShareholderId(e.id),
+            name: e.name,
+        }))
     }
 
     async fn shareholder_exists(&self, id: ShareholderId) -> Result<bool> {
         Ok(self.shareholders.exists(&id.0.to_string()).await?)
     }
 
-    async fn get_share_transaction(&self, id: ShareTransactionId) -> Result<Option<ShareTransactionDto>> {
+    async fn get_share_transaction(
+        &self,
+        id: ShareTransactionId,
+    ) -> Result<Option<ShareTransactionDto>> {
         let e: Option<ShareTransaction> = self.transactions.find_by_id(&id.0.to_string()).await?;
         Ok(e.map(|e| ShareTransactionDto {
             id: ShareTransactionId(e.id),
-            company_id: e.company_id,
             share_class_id: e.share_class_id,
             shareholder_id: e.shareholder_id,
             txn_type: e.txn_type,
@@ -146,7 +158,9 @@ impl EquityQueryService for EquityQueryServiceImpl {
         id: ShareTransactionId,
     ) -> Result<Option<ShareTransactionSummary>> {
         let e: Option<ShareTransaction> = self.transactions.find_by_id(&id.0.to_string()).await?;
-        Ok(e.map(|e| ShareTransactionSummary { id: ShareTransactionId(e.id) }))
+        Ok(e.map(|e| ShareTransactionSummary {
+            id: ShareTransactionId(e.id),
+        }))
     }
 
     async fn share_transaction_exists(&self, id: ShareTransactionId) -> Result<bool> {

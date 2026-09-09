@@ -4,6 +4,10 @@
 //! `user_owned` in `metaphor.codegen.yaml`, so the generator skips it wholesale. The custom methods
 //! below hold the hand-written ShareClass SQL (4-layer rule: services orchestrate, repos hold SQL).
 //!
+//! Tenancy (ADR-0029): the SQL here carries no tenant key. The scoped-execute helpers ride the
+//! request-dedicated connection when the composing service bound one (its fence variables govern
+//! what the RLS layer accepts) and fall back to a plain pool execute otherwise.
+//!
 //! Thin newtype over `backbone_orm::GenericCrudRepository<ShareClass, backbone_orm::SoftDelete>`.
 //! All standard CRUD methods are available via `Deref`.
 
@@ -11,8 +15,6 @@ use anyhow::Result;
 use rust_decimal::Decimal;
 use sqlx::{PgPool, Row};
 use uuid::Uuid;
-
-use backbone_orm::company_scope;
 
 use crate::domain::entity::ShareClass;
 
@@ -29,7 +31,9 @@ pub struct ShareClassRepository(
 
 impl std::ops::Deref for ShareClassRepository {
     type Target = backbone_orm::GenericCrudRepository<ShareClass, backbone_orm::SoftDelete>;
-    fn deref(&self) -> &Self::Target { &self.0 }
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
 }
 
 impl ShareClassRepository {
@@ -44,7 +48,6 @@ impl ShareClassRepository {
 /// `status` is not a field — the INSERT hard-codes `'active'`.
 pub struct NewShareClassRow<'a> {
     pub id: Uuid,
-    pub company_id: Uuid,
     pub code: &'a str,
     pub name: &'a str,
     pub par_value: Decimal,
@@ -67,25 +70,29 @@ pub struct ShareClassDetailRow {
 impl ShareClassRepository {
     /// Register a share class.
     ///
-    /// A write outside any transaction: takes the pool and runs `execute_scoped` so the RLS fence
-    /// (ADR-0008) applies. The caller wraps this in `with_company_scope(Some(company))` — the company
-    /// is on the DTO, and that scope is what satisfies the INSERT's WITH CHECK fence (a bare-pool
-    /// insert is rejected).
+    /// A write outside any transaction: takes the pool and runs the tenant-agnostic `execute_scoped`
+    /// — under a decorated deployment it rides the request-dedicated connection whose fence (WITH
+    /// CHECK) governs the row; with no scope bound this is a plain insert.
     pub async fn insert_share_class(
         &self,
         pool: &PgPool,
         c: &NewShareClassRow<'_>,
     ) -> Result<(), sqlx::Error> {
-        company_scope::execute_scoped(
+        backbone_orm::org_scope::execute_scoped(
             pool,
             sqlx::query(
                 r#"INSERT INTO equity.share_classes
-                     (id, company_id, code, name, par_value, currency, share_capital_account_id,
+                     (id, code, name, par_value, currency, share_capital_account_id,
                       share_premium_account_id, status)
-                   VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'active')"#,
+                   VALUES ($1,$2,$3,$4,$5,$6,$7,'active')"#,
             )
-            .bind(c.id).bind(c.company_id).bind(c.code).bind(c.name).bind(c.par_value)
-            .bind(c.currency).bind(c.share_capital_account_id).bind(c.share_premium_account_id),
+            .bind(c.id)
+            .bind(c.code)
+            .bind(c.name)
+            .bind(c.par_value)
+            .bind(c.currency)
+            .bind(c.share_capital_account_id)
+            .bind(c.share_premium_account_id),
         )
         .await?;
         Ok(())
@@ -93,17 +100,16 @@ impl ShareClassRepository {
 
     /// Load a share class's terms. `Ok(None)` = not found.
     ///
-    /// ID-only: the class is identified by id alone — no company argument, and this read runs BEFORE
-    /// the caller's transaction is bound. It therefore rides the ambient scope: under HTTP the
-    /// request-dedicated connection carries the caller's `app.company_id`, so another company's class
-    /// is simply not found. A non-request caller (job, event subscriber) MUST wrap this in
-    /// `with_company_scope(Some(company_id))`.
+    /// ID-only: the class is identified by id alone (id is globally unique — the module carries no
+    /// tenancy). The read rides the request-dedicated connection when the composing service bound
+    /// one, so a row the caller's fence excludes is simply not found; with no scope bound this is a
+    /// plain lookup.
     pub async fn fetch_class(
         &self,
         pool: &PgPool,
         id: Uuid,
     ) -> Result<Option<ShareClassDetailRow>, sqlx::Error> {
-        let row = company_scope::fetch_optional_row_scoped(
+        let row = backbone_orm::org_scope::fetch_optional_row_scoped(
             pool,
             sqlx::query(
                 r#"SELECT par_value, currency, share_capital_account_id, share_premium_account_id, status::text AS status

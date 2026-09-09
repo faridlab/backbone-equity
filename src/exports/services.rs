@@ -5,11 +5,53 @@
 //! These services provide the public API for other modules.
 //! They only expose read operations - writes go through events.
 
-
 // ============================================================================
 // CUSTOM SERVICES
 // ============================================================================
 
 // <<< CUSTOM SERVICES START >>>
-// Add custom public services here
+// The module's read contract: ID-only reads over the four aggregates, mapping storage entities to
+// the exported DTOs. Deliberately read-only — the cap-table write surface is a hand-authored
+// application service, not a cross-module contract. Opted in with the `unstable-write-service`
+// feature (no in-workspace service composes it yet); the in-tree reference impl lives at
+// `application::service::equity_query_service_impl` and proves the contract realizable.
+use super::types::{
+    DividendDto, DividendId, DividendSummary, ShareClassDto, ShareClassId, ShareClassSummary,
+    ShareTransactionDto, ShareTransactionId, ShareTransactionSummary, ShareholderDto,
+    ShareholderId, ShareholderSummary,
+};
+
+/// The read contract other modules (or the composing service) may depend on.
+#[cfg(feature = "unstable-write-service")]
+#[async_trait::async_trait]
+pub trait EquityQueryService: Send + Sync {
+    async fn get_dividend(&self, id: DividendId) -> anyhow::Result<Option<DividendDto>>;
+    async fn get_dividend_summary(&self, id: DividendId)
+        -> anyhow::Result<Option<DividendSummary>>;
+    async fn dividend_exists(&self, id: DividendId) -> anyhow::Result<bool>;
+
+    async fn get_share_class(&self, id: ShareClassId) -> anyhow::Result<Option<ShareClassDto>>;
+    async fn get_share_class_summary(
+        &self,
+        id: ShareClassId,
+    ) -> anyhow::Result<Option<ShareClassSummary>>;
+    async fn share_class_exists(&self, id: ShareClassId) -> anyhow::Result<bool>;
+
+    async fn get_shareholder(&self, id: ShareholderId) -> anyhow::Result<Option<ShareholderDto>>;
+    async fn get_shareholder_summary(
+        &self,
+        id: ShareholderId,
+    ) -> anyhow::Result<Option<ShareholderSummary>>;
+    async fn shareholder_exists(&self, id: ShareholderId) -> anyhow::Result<bool>;
+
+    async fn get_share_transaction(
+        &self,
+        id: ShareTransactionId,
+    ) -> anyhow::Result<Option<ShareTransactionDto>>;
+    async fn get_share_transaction_summary(
+        &self,
+        id: ShareTransactionId,
+    ) -> anyhow::Result<Option<ShareTransactionSummary>>;
+    async fn share_transaction_exists(&self, id: ShareTransactionId) -> anyhow::Result<bool>;
+}
 // <<< CUSTOM SERVICES END >>>

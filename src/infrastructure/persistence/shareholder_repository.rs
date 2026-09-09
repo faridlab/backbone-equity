@@ -4,14 +4,16 @@
 //! `user_owned` in `metaphor.codegen.yaml`, so the generator skips it wholesale. The custom methods
 //! below hold the hand-written Shareholder SQL (4-layer rule: services orchestrate, repos hold SQL).
 //!
+//! Tenancy (ADR-0029): the SQL here carries no tenant key. The scoped-execute helper rides the
+//! request-dedicated connection when the composing service bound one and falls back to a plain pool
+//! execute otherwise.
+//!
 //! Thin newtype over `backbone_orm::GenericCrudRepository<Shareholder, backbone_orm::SoftDelete>`.
 //! All standard CRUD methods are available via `Deref`.
 
 use anyhow::Result;
 use sqlx::PgPool;
 use uuid::Uuid;
-
-use backbone_orm::company_scope;
 
 use crate::domain::entity::Shareholder;
 
@@ -28,7 +30,9 @@ pub struct ShareholderRepository(
 
 impl std::ops::Deref for ShareholderRepository {
     type Target = backbone_orm::GenericCrudRepository<Shareholder, backbone_orm::SoftDelete>;
-    fn deref(&self) -> &Self::Target { &self.0 }
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
 }
 
 impl ShareholderRepository {
@@ -45,7 +49,6 @@ impl ShareholderRepository {
 /// deserialize panic.
 pub struct NewShareholderRow<'a> {
     pub id: Uuid,
-    pub company_id: Uuid,
     pub party_id: Option<Uuid>,
     pub name: &'a str,
     pub holder_type: &'a str,
@@ -55,21 +58,24 @@ pub struct NewShareholderRow<'a> {
 impl ShareholderRepository {
     /// Register a shareholder.
     ///
-    /// A write outside any transaction: takes the pool and runs `execute_scoped` so the RLS fence
-    /// (ADR-0008) applies. The caller wraps this in `with_company_scope(Some(company))` — the company
-    /// is on the DTO, and that scope is what satisfies the INSERT's WITH CHECK fence.
+    /// A write outside any transaction: takes the pool and runs the tenant-agnostic `execute_scoped`
+    /// — under a decorated deployment it rides the request-dedicated connection whose fence governs
+    /// the row; with no scope bound this is a plain insert.
     pub async fn insert_shareholder(
         &self,
         pool: &PgPool,
         s: &NewShareholderRow<'_>,
     ) -> Result<(), sqlx::Error> {
-        company_scope::execute_scoped(
+        backbone_orm::org_scope::execute_scoped(
             pool,
             sqlx::query(
-                r#"INSERT INTO equity.shareholders (id, company_id, party_id, name, holder_type)
-                   VALUES ($1,$2,$3,$4,$5::holder_type)"#,
+                r#"INSERT INTO equity.shareholders (id, party_id, name, holder_type)
+                   VALUES ($1,$2,$3,$4::holder_type)"#,
             )
-            .bind(s.id).bind(s.company_id).bind(s.party_id).bind(s.name).bind(s.holder_type),
+            .bind(s.id)
+            .bind(s.party_id)
+            .bind(s.name)
+            .bind(s.holder_type),
         )
         .await?;
         Ok(())

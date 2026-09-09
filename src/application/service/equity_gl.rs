@@ -27,10 +27,24 @@ pub struct GlPostLine {
 
 impl GlPostLine {
     pub fn debit(account_id: Uuid, amount: Decimal) -> Self {
-        Self { account_id, debit: amount, credit: Decimal::ZERO, party_type: None, party_id: None, description: None }
+        Self {
+            account_id,
+            debit: amount,
+            credit: Decimal::ZERO,
+            party_type: None,
+            party_id: None,
+            description: None,
+        }
     }
     pub fn credit(account_id: Uuid, amount: Decimal) -> Self {
-        Self { account_id, debit: Decimal::ZERO, credit: amount, party_type: None, party_id: None, description: None }
+        Self {
+            account_id,
+            debit: Decimal::ZERO,
+            credit: amount,
+            party_type: None,
+            party_id: None,
+            description: None,
+        }
     }
     pub fn with_description(mut self, d: impl Into<String>) -> Self {
         self.description = Some(d.into());
@@ -42,6 +56,9 @@ impl GlPostLine {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct AccountingPostEnvelope {
     pub idempotency_key: String,
+    /// The books owner — accounting's domain key (accounting is not tenant-stripped). Equity does
+    /// not carry a tenant of its own (ADR-0029): the write path reads this off the composing
+    /// service's org request scope (`legacy_company_id`) at mint time, fail-closed when absent.
     pub company_id: Uuid,
     pub branch_id: Option<Uuid>,
     /// Posting source discriminator — equity emits "equity".

@@ -1,11 +1,11 @@
-use chrono::{DateTime, Utc, NaiveDate};
+use chrono::{DateTime, NaiveDate, Utc};
+use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use uuid::Uuid;
-use rust_decimal::Decimal;
 
-use super::ShareTxnType;
 use super::AuditMetadata;
+use super::ShareTxnType;
 
 /// Strongly-typed ID for ShareTransaction
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -13,9 +13,15 @@ use super::AuditMetadata;
 pub struct ShareTransactionId(pub Uuid);
 
 impl ShareTransactionId {
-    pub fn new(id: Uuid) -> Self { Self(id) }
-    pub fn generate() -> Self { Self(Uuid::new_v4()) }
-    pub fn into_inner(self) -> Uuid { self.0 }
+    pub fn new(id: Uuid) -> Self {
+        Self(id)
+    }
+    pub fn generate() -> Self {
+        Self(Uuid::new_v4())
+    }
+    pub fn into_inner(self) -> Uuid {
+        self.0
+    }
 }
 
 impl std::fmt::Display for ShareTransactionId {
@@ -32,26 +38,33 @@ impl std::str::FromStr for ShareTransactionId {
 }
 
 impl From<Uuid> for ShareTransactionId {
-    fn from(id: Uuid) -> Self { Self(id) }
+    fn from(id: Uuid) -> Self {
+        Self(id)
+    }
 }
 
 impl From<ShareTransactionId> for Uuid {
-    fn from(id: ShareTransactionId) -> Self { id.0 }
+    fn from(id: ShareTransactionId) -> Self {
+        id.0
+    }
 }
 
 impl AsRef<Uuid> for ShareTransactionId {
-    fn as_ref(&self) -> &Uuid { &self.0 }
+    fn as_ref(&self) -> &Uuid {
+        &self.0
+    }
 }
 
 impl std::ops::Deref for ShareTransactionId {
     type Target = Uuid;
-    fn deref(&self) -> &Self::Target { &self.0 }
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct ShareTransaction {
     pub id: Uuid,
-    pub company_id: Uuid,
     pub share_class_id: Uuid,
     pub shareholder_id: Uuid,
     pub txn_type: ShareTxnType,
@@ -75,10 +88,18 @@ impl ShareTransaction {
     }
 
     /// Create a new ShareTransaction with required fields
-    pub fn new(company_id: Uuid, share_class_id: Uuid, shareholder_id: Uuid, txn_type: ShareTxnType, quantity: Decimal, price_per_share: Decimal, amount: Decimal, txn_date: NaiveDate, gl_posted: bool) -> Self {
+    pub fn new(
+        share_class_id: Uuid,
+        shareholder_id: Uuid,
+        txn_type: ShareTxnType,
+        quantity: Decimal,
+        price_per_share: Decimal,
+        amount: Decimal,
+        txn_date: NaiveDate,
+        gl_posted: bool,
+    ) -> Self {
         Self {
             id: Uuid::new_v4(),
-            company_id,
             share_class_id,
             shareholder_id,
             txn_type,
@@ -144,7 +165,6 @@ impl ShareTransaction {
         self.metadata.deleted_by.as_ref()
     }
 
-
     // ==========================================================
     // Fluent Setters (with_* for optional fields)
     // ==========================================================
@@ -175,41 +195,60 @@ impl ShareTransaction {
     pub fn apply_patch(&mut self, fields: std::collections::HashMap<String, serde_json::Value>) {
         for (key, value) in fields {
             match key.as_str() {
-                "company_id" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.company_id = v; }
-                }
                 "share_class_id" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.share_class_id = v; }
+                    if let Ok(v) = serde_json::from_value(value) {
+                        self.share_class_id = v;
+                    }
                 }
                 "shareholder_id" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.shareholder_id = v; }
+                    if let Ok(v) = serde_json::from_value(value) {
+                        self.shareholder_id = v;
+                    }
                 }
                 "txn_type" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.txn_type = v; }
+                    if let Ok(v) = serde_json::from_value(value) {
+                        self.txn_type = v;
+                    }
                 }
                 "quantity" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.quantity = v; }
+                    if let Ok(v) = serde_json::from_value(value) {
+                        self.quantity = v;
+                    }
                 }
                 "price_per_share" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.price_per_share = v; }
+                    if let Ok(v) = serde_json::from_value(value) {
+                        self.price_per_share = v;
+                    }
                 }
                 "amount" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.amount = v; }
+                    if let Ok(v) = serde_json::from_value(value) {
+                        self.amount = v;
+                    }
                 }
                 "counterparty_shareholder_id" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.counterparty_shareholder_id = v; }
+                    if let Ok(v) = serde_json::from_value(value) {
+                        self.counterparty_shareholder_id = v;
+                    }
                 }
                 "transfer_group_id" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.transfer_group_id = v; }
+                    if let Ok(v) = serde_json::from_value(value) {
+                        self.transfer_group_id = v;
+                    }
                 }
                 "posting_reference" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.posting_reference = v; }
+                    if let Ok(v) = serde_json::from_value(value) {
+                        self.posting_reference = v;
+                    }
                 }
                 "txn_date" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.txn_date = v; }
+                    if let Ok(v) = serde_json::from_value(value) {
+                        self.txn_date = v;
+                    }
                 }
                 "gl_posted" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.gl_posted = v; }
+                    if let Ok(v) = serde_json::from_value(value) {
+                        self.gl_posted = v;
+                    }
                 }
                 _ => {} // ignore unknown fields
             }
@@ -265,19 +304,18 @@ impl backbone_orm::EntityRepoMeta for ShareTransaction {
     fn column_types() -> std::collections::HashMap<String, String> {
         let mut m = std::collections::HashMap::new();
         m.insert("id".to_string(), "uuid".to_string());
-        m.insert("company_id".to_string(), "uuid".to_string());
         m.insert("share_class_id".to_string(), "uuid".to_string());
         m.insert("shareholder_id".to_string(), "uuid".to_string());
-        m.insert("counterparty_shareholder_id".to_string(), "uuid".to_string());
+        m.insert(
+            "counterparty_shareholder_id".to_string(),
+            "uuid".to_string(),
+        );
         m.insert("transfer_group_id".to_string(), "uuid".to_string());
         m.insert("txn_type".to_string(), "share_txn_type".to_string());
         m
     }
     fn search_fields() -> &'static [&'static str] {
         &[]
-    }
-    fn company_field() -> Option<&'static str> {
-        Some("company_id")
     }
     fn relations() -> &'static [(&'static str, &'static str, &'static str)] {
         &[("shareClass", "share_classes", "shareClassId")]
@@ -290,7 +328,6 @@ impl backbone_orm::EntityRepoMeta for ShareTransaction {
 /// System fields (id, metadata, timestamps) are auto-initialized.
 #[derive(Debug, Clone, Default)]
 pub struct ShareTransactionBuilder {
-    company_id: Option<Uuid>,
     share_class_id: Option<Uuid>,
     shareholder_id: Option<Uuid>,
     txn_type: Option<ShareTxnType>,
@@ -305,12 +342,6 @@ pub struct ShareTransactionBuilder {
 }
 
 impl ShareTransactionBuilder {
-    /// Set the company_id field (required)
-    pub fn company_id(mut self, value: Uuid) -> Self {
-        self.company_id = Some(value);
-        self
-    }
-
     /// Set the share_class_id field (required)
     pub fn share_class_id(mut self, value: Uuid) -> Self {
         self.share_class_id = Some(value);
@@ -381,18 +412,30 @@ impl ShareTransactionBuilder {
     ///
     /// Returns Err if any required field without a default is missing.
     pub fn build(self) -> Result<ShareTransaction, String> {
-        let company_id = self.company_id.ok_or_else(|| "company_id is required".to_string())?;
-        let share_class_id = self.share_class_id.ok_or_else(|| "share_class_id is required".to_string())?;
-        let shareholder_id = self.shareholder_id.ok_or_else(|| "shareholder_id is required".to_string())?;
-        let txn_type = self.txn_type.ok_or_else(|| "txn_type is required".to_string())?;
-        let quantity = self.quantity.ok_or_else(|| "quantity is required".to_string())?;
-        let price_per_share = self.price_per_share.ok_or_else(|| "price_per_share is required".to_string())?;
-        let amount = self.amount.ok_or_else(|| "amount is required".to_string())?;
-        let txn_date = self.txn_date.ok_or_else(|| "txn_date is required".to_string())?;
+        let share_class_id = self
+            .share_class_id
+            .ok_or_else(|| "share_class_id is required".to_string())?;
+        let shareholder_id = self
+            .shareholder_id
+            .ok_or_else(|| "shareholder_id is required".to_string())?;
+        let txn_type = self
+            .txn_type
+            .ok_or_else(|| "txn_type is required".to_string())?;
+        let quantity = self
+            .quantity
+            .ok_or_else(|| "quantity is required".to_string())?;
+        let price_per_share = self
+            .price_per_share
+            .ok_or_else(|| "price_per_share is required".to_string())?;
+        let amount = self
+            .amount
+            .ok_or_else(|| "amount is required".to_string())?;
+        let txn_date = self
+            .txn_date
+            .ok_or_else(|| "txn_date is required".to_string())?;
 
         Ok(ShareTransaction {
             id: Uuid::new_v4(),
-            company_id,
             share_class_id,
             shareholder_id,
             txn_type,
