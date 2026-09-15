@@ -7,7 +7,7 @@ info:
     This API provides 11 standard CRUD endpoints for each model.
 
 servers:
-  - url: http://localhost:3000
+  - url: /
     description: Development server
 
 tags:
@@ -21,7 +21,7 @@ tags:
     description: ShareTransaction management endpoints
 
 paths:
-  /api/v1/dividends:
+  /api/v1/equity/dividends:
     get:
       tags:
         - Dividends
@@ -67,7 +67,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
-  /api/v1/dividends/{id}:
+  /api/v1/equity/dividends/{id}:
     parameters:
       - $ref: '#/components/parameters/IdParam'
 
@@ -139,7 +139,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/dividends/bulk:
+  /api/v1/equity/dividends/bulk:
     post:
       tags:
         - Dividends
@@ -231,7 +231,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/dividends/upsert:
+  /api/v1/equity/dividends/upsert:
     post:
       tags:
         - Dividends
@@ -261,7 +261,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Dividend'
 
-  /api/v1/dividends/trash:
+  /api/v1/equity/dividends/trash:
     get:
       tags:
         - Dividends
@@ -278,7 +278,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/DividendList'
 
-  /api/v1/dividends/{id}/restore:
+  /api/v1/equity/dividends/{id}/restore:
     parameters:
       - $ref: '#/components/parameters/IdParam'
     post:
@@ -296,7 +296,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/dividends/empty:
+  /api/v1/equity/dividends/empty:
     delete:
       tags:
         - Dividends
@@ -313,7 +313,7 @@ paths:
                   deleted_count:
                     type: integer
 
-  /api/v1/dividends/delete/bulk:
+  /api/v1/equity/dividends/delete/bulk:
     post:
       tags:
         - Dividends
@@ -333,7 +333,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/dividends/restore/bulk:
+  /api/v1/equity/dividends/restore/bulk:
     post:
       tags:
         - Dividends
@@ -351,7 +351,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/dividends/restore/all:
+  /api/v1/equity/dividends/restore/all:
     post:
       tags:
         - Dividends
@@ -367,7 +367,7 @@ paths:
                 properties:
                   restored: { type: integer }
 
-  /api/v1/dividends/trash/bulk:
+  /api/v1/equity/dividends/trash/bulk:
     delete:
       tags:
         - Dividends
@@ -387,7 +387,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/share_classes:
+  /api/v1/equity/share_classes:
     get:
       tags:
         - ShareClasses
@@ -433,7 +433,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
-  /api/v1/share_classes/{id}:
+  /api/v1/equity/share_classes/{id}:
     parameters:
       - $ref: '#/components/parameters/IdParam'
 
@@ -505,7 +505,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/share_classes/bulk:
+  /api/v1/equity/share_classes/bulk:
     post:
       tags:
         - ShareClasses
@@ -597,7 +597,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/share_classes/upsert:
+  /api/v1/equity/share_classes/upsert:
     post:
       tags:
         - ShareClasses
@@ -627,7 +627,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ShareClass'
 
-  /api/v1/share_classes/trash:
+  /api/v1/equity/share_classes/trash:
     get:
       tags:
         - ShareClasses
@@ -644,7 +644,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ShareClassList'
 
-  /api/v1/share_classes/{id}/restore:
+  /api/v1/equity/share_classes/{id}/restore:
     parameters:
       - $ref: '#/components/parameters/IdParam'
     post:
@@ -662,7 +662,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/share_classes/empty:
+  /api/v1/equity/share_classes/empty:
     delete:
       tags:
         - ShareClasses
@@ -679,7 +679,7 @@ paths:
                   deleted_count:
                     type: integer
 
-  /api/v1/share_classes/delete/bulk:
+  /api/v1/equity/share_classes/delete/bulk:
     post:
       tags:
         - ShareClasses
@@ -699,7 +699,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/share_classes/restore/bulk:
+  /api/v1/equity/share_classes/restore/bulk:
     post:
       tags:
         - ShareClasses
@@ -717,7 +717,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/share_classes/restore/all:
+  /api/v1/equity/share_classes/restore/all:
     post:
       tags:
         - ShareClasses
@@ -733,7 +733,7 @@ paths:
                 properties:
                   restored: { type: integer }
 
-  /api/v1/share_classes/trash/bulk:
+  /api/v1/equity/share_classes/trash/bulk:
     delete:
       tags:
         - ShareClasses
@@ -753,7 +753,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/shareholders:
+  /api/v1/equity/shareholders:
     get:
       tags:
         - Shareholders
@@ -799,7 +799,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
-  /api/v1/shareholders/{id}:
+  /api/v1/equity/shareholders/{id}:
     parameters:
       - $ref: '#/components/parameters/IdParam'
 
@@ -871,7 +871,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/shareholders/bulk:
+  /api/v1/equity/shareholders/bulk:
     post:
       tags:
         - Shareholders
@@ -963,7 +963,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/shareholders/upsert:
+  /api/v1/equity/shareholders/upsert:
     post:
       tags:
         - Shareholders
@@ -993,7 +993,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Shareholder'
 
-  /api/v1/shareholders/trash:
+  /api/v1/equity/shareholders/trash:
     get:
       tags:
         - Shareholders
@@ -1010,7 +1010,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ShareholderList'
 
-  /api/v1/shareholders/{id}/restore:
+  /api/v1/equity/shareholders/{id}/restore:
     parameters:
       - $ref: '#/components/parameters/IdParam'
     post:
@@ -1028,7 +1028,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/shareholders/empty:
+  /api/v1/equity/shareholders/empty:
     delete:
       tags:
         - Shareholders
@@ -1045,7 +1045,7 @@ paths:
                   deleted_count:
                     type: integer
 
-  /api/v1/shareholders/delete/bulk:
+  /api/v1/equity/shareholders/delete/bulk:
     post:
       tags:
         - Shareholders
@@ -1065,7 +1065,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/shareholders/restore/bulk:
+  /api/v1/equity/shareholders/restore/bulk:
     post:
       tags:
         - Shareholders
@@ -1083,7 +1083,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/shareholders/restore/all:
+  /api/v1/equity/shareholders/restore/all:
     post:
       tags:
         - Shareholders
@@ -1099,7 +1099,7 @@ paths:
                 properties:
                   restored: { type: integer }
 
-  /api/v1/shareholders/trash/bulk:
+  /api/v1/equity/shareholders/trash/bulk:
     delete:
       tags:
         - Shareholders
@@ -1119,7 +1119,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/share_transactions:
+  /api/v1/equity/share_transactions:
     get:
       tags:
         - ShareTransactions
@@ -1165,7 +1165,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
-  /api/v1/share_transactions/{id}:
+  /api/v1/equity/share_transactions/{id}:
     parameters:
       - $ref: '#/components/parameters/IdParam'
 
@@ -1237,7 +1237,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/share_transactions/bulk:
+  /api/v1/equity/share_transactions/bulk:
     post:
       tags:
         - ShareTransactions
@@ -1329,7 +1329,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/share_transactions/upsert:
+  /api/v1/equity/share_transactions/upsert:
     post:
       tags:
         - ShareTransactions
@@ -1359,7 +1359,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ShareTransaction'
 
-  /api/v1/share_transactions/trash:
+  /api/v1/equity/share_transactions/trash:
     get:
       tags:
         - ShareTransactions
@@ -1376,7 +1376,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ShareTransactionList'
 
-  /api/v1/share_transactions/{id}/restore:
+  /api/v1/equity/share_transactions/{id}/restore:
     parameters:
       - $ref: '#/components/parameters/IdParam'
     post:
@@ -1394,7 +1394,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/share_transactions/empty:
+  /api/v1/equity/share_transactions/empty:
     delete:
       tags:
         - ShareTransactions
@@ -1411,7 +1411,7 @@ paths:
                   deleted_count:
                     type: integer
 
-  /api/v1/share_transactions/delete/bulk:
+  /api/v1/equity/share_transactions/delete/bulk:
     post:
       tags:
         - ShareTransactions
@@ -1431,7 +1431,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/share_transactions/restore/bulk:
+  /api/v1/equity/share_transactions/restore/bulk:
     post:
       tags:
         - ShareTransactions
@@ -1449,7 +1449,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/share_transactions/restore/all:
+  /api/v1/equity/share_transactions/restore/all:
     post:
       tags:
         - ShareTransactions
@@ -1465,7 +1465,7 @@ paths:
                 properties:
                   restored: { type: integer }
 
-  /api/v1/share_transactions/trash/bulk:
+  /api/v1/equity/share_transactions/trash/bulk:
     delete:
       tags:
         - ShareTransactions
