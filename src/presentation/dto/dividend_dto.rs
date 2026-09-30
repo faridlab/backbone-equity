@@ -5,10 +5,10 @@
 //! DTOs provide a clean separation between domain entities and API
 //! representations, with validation and OpenAPI documentation support.
 
-use chrono::{DateTime, NaiveDate, Utc};
-use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
+use chrono::{DateTime, Utc, NaiveDate};
+use rust_decimal::Decimal;
 
 #[cfg(feature = "openapi")]
 #[cfg(feature = "openapi")]
@@ -17,8 +17,8 @@ use utoipa::ToSchema;
 #[cfg(feature = "validation")]
 use validator::Validate;
 
-use crate::domain::entity::AuditMetadata;
 use crate::domain::entity::Dividend;
+use crate::domain::entity::AuditMetadata;
 use crate::domain::entity::DividendStatus;
 
 // =============================================================================
@@ -34,20 +34,13 @@ use crate::domain::entity::DividendStatus;
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct CreateDividendDto {
-    #[cfg_attr(
-        feature = "openapi",
-        schema(example = "550e8400-e29b-41d4-a716-446655440000")
-    )]
+    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(alias = "share_class_id")]
     pub share_class_id: Uuid,
     #[cfg_attr(feature = "openapi", schema(example = "2024-01-01"))]
     #[serde(alias = "declaration_date")]
     pub declaration_date: NaiveDate,
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        alias = "payment_date"
-    )]
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "payment_date")]
     pub payment_date: Option<NaiveDate>,
     #[serde(alias = "per_share_amount")]
     pub per_share_amount: Decimal,
@@ -56,16 +49,10 @@ pub struct CreateDividendDto {
     #[serde(alias = "total_amount")]
     pub total_amount: Decimal,
     pub status: DividendStatus,
-    #[cfg_attr(
-        feature = "openapi",
-        schema(example = "550e8400-e29b-41d4-a716-446655440000")
-    )]
+    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(alias = "retained_earnings_account_id")]
     pub retained_earnings_account_id: Uuid,
-    #[cfg_attr(
-        feature = "openapi",
-        schema(example = "550e8400-e29b-41d4-a716-446655440000")
-    )]
+    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(alias = "dividend_payable_account_id")]
     pub dividend_payable_account_id: Uuid,
 }
@@ -83,20 +70,13 @@ pub struct CreateDividendDto {
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateDividendDto {
-    #[cfg_attr(
-        feature = "openapi",
-        schema(example = "550e8400-e29b-41d4-a716-446655440000")
-    )]
+    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(alias = "share_class_id")]
     pub share_class_id: Uuid,
     #[cfg_attr(feature = "openapi", schema(example = "2024-01-01"))]
     #[serde(alias = "declaration_date")]
     pub declaration_date: NaiveDate,
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        alias = "payment_date"
-    )]
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "payment_date")]
     pub payment_date: Option<NaiveDate>,
     #[serde(alias = "per_share_amount")]
     pub per_share_amount: Decimal,
@@ -105,16 +85,10 @@ pub struct UpdateDividendDto {
     #[serde(alias = "total_amount")]
     pub total_amount: Decimal,
     pub status: DividendStatus,
-    #[cfg_attr(
-        feature = "openapi",
-        schema(example = "550e8400-e29b-41d4-a716-446655440000")
-    )]
+    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(alias = "retained_earnings_account_id")]
     pub retained_earnings_account_id: Uuid,
-    #[cfg_attr(
-        feature = "openapi",
-        schema(example = "550e8400-e29b-41d4-a716-446655440000")
-    )]
+    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(alias = "dividend_payable_account_id")]
     pub dividend_payable_account_id: Uuid,
 }
@@ -132,10 +106,7 @@ pub struct UpdateDividendDto {
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct PatchDividendDto {
-    #[cfg_attr(
-        feature = "openapi",
-        schema(example = "550e8400-e29b-41d4-a716-446655440000")
-    )]
+    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "share_class_id")]
     pub share_class_id: Option<Uuid>,
     #[cfg_attr(feature = "openapi", schema(example = "2024-01-01"))]
@@ -151,38 +122,18 @@ pub struct PatchDividendDto {
     pub total_amount: Option<Decimal>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub status: Option<DividendStatus>,
-    #[cfg_attr(
-        feature = "openapi",
-        schema(example = "550e8400-e29b-41d4-a716-446655440000")
-    )]
-    #[serde(
-        skip_serializing_if = "Option::is_none",
-        alias = "retained_earnings_account_id"
-    )]
+    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
+    #[serde(skip_serializing_if = "Option::is_none", alias = "retained_earnings_account_id")]
     pub retained_earnings_account_id: Option<Uuid>,
-    #[cfg_attr(
-        feature = "openapi",
-        schema(example = "550e8400-e29b-41d4-a716-446655440000")
-    )]
-    #[serde(
-        skip_serializing_if = "Option::is_none",
-        alias = "dividend_payable_account_id"
-    )]
+    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
+    #[serde(skip_serializing_if = "Option::is_none", alias = "dividend_payable_account_id")]
     pub dividend_payable_account_id: Option<Uuid>,
 }
 
 impl PatchDividendDto {
     /// Check if any field is set
     pub fn has_changes(&self) -> bool {
-        self.share_class_id.is_some()
-            || self.declaration_date.is_some()
-            || self.payment_date.is_some()
-            || self.per_share_amount.is_some()
-            || self.shares_outstanding.is_some()
-            || self.total_amount.is_some()
-            || self.status.is_some()
-            || self.retained_earnings_account_id.is_some()
-            || self.dividend_payable_account_id.is_some()
+        self.share_class_id.is_some() || self.declaration_date.is_some() || self.payment_date.is_some() || self.per_share_amount.is_some() || self.shares_outstanding.is_some() || self.total_amount.is_some() || self.status.is_some() || self.retained_earnings_account_id.is_some() || self.dividend_payable_account_id.is_some()
     }
 }
 
@@ -198,15 +149,9 @@ impl PatchDividendDto {
 #[cfg_attr(feature = "openapi", derive(ToSchema))]
 #[serde(rename_all = "camelCase")]
 pub struct DividendResponseDto {
-    #[cfg_attr(
-        feature = "openapi",
-        schema(example = "550e8400-e29b-41d4-a716-446655440000")
-    )]
+    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     pub id: Uuid,
-    #[cfg_attr(
-        feature = "openapi",
-        schema(example = "550e8400-e29b-41d4-a716-446655440000")
-    )]
+    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     pub share_class_id: Uuid,
     #[cfg_attr(feature = "openapi", schema(example = "2024-01-01"))]
     pub declaration_date: NaiveDate,
@@ -215,15 +160,9 @@ pub struct DividendResponseDto {
     pub shares_outstanding: Decimal,
     pub total_amount: Decimal,
     pub status: DividendStatus,
-    #[cfg_attr(
-        feature = "openapi",
-        schema(example = "550e8400-e29b-41d4-a716-446655440000")
-    )]
+    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     pub retained_earnings_account_id: Uuid,
-    #[cfg_attr(
-        feature = "openapi",
-        schema(example = "550e8400-e29b-41d4-a716-446655440000")
-    )]
+    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     pub dividend_payable_account_id: Uuid,
     pub metadata: AuditMetadata,
 }

@@ -17,36 +17,39 @@ use uuid::Uuid;
 async fn setup(
     pool: &sqlx::PgPool,
 ) -> (Uuid, OrgScope, EquityWriteService, EqAccounts, Uuid, Uuid) {
-    let company = Uuid::new_v4();
-    let svc = EquityWriteService::new(pool.clone());
-    let a = eq_accounts(pool, company).await;
-    let class = svc
-        .register_share_class(NewShareClass {
-            code: "ORD".into(),
-            name: "Ordinary".into(),
-            par_value: dec("1000"),
-            currency: "IDR".into(),
-            share_capital_account_id: a.share_capital,
-            share_premium_account_id: a.share_premium,
-        })
-        .await
-        .unwrap();
-    let holder = svc
-        .register_shareholder(NewShareholder {
-            party_id: None,
-            name: "Alice".into(),
-            holder_type: "individual".into(),
-        })
-        .await
-        .unwrap();
-    (
-        company,
-        OrgScope::for_company_unit(company),
-        svc,
-        a,
-        class,
-        holder,
-    )
+    let company = company_node(pool).await;
+    let scope = OrgScope::for_company_unit(company);
+    // The stripped schema guards every insert: the fixture's own writes run
+    // inside the same request scope the test stands in for.
+    let scope_pool = pool.clone();
+    let inner_pool = pool.clone();
+    let (svc, a, class, holder) = with_org_request_scope(&scope_pool, scope.clone(), async move {
+        let svc = EquityWriteService::new(inner_pool.clone());
+        let a = eq_accounts(&inner_pool, company).await;
+        let class = svc
+            .register_share_class(NewShareClass {
+                code: "ORD".into(),
+                name: "Ordinary".into(),
+                par_value: dec("1000"),
+                currency: "IDR".into(),
+                share_capital_account_id: a.share_capital,
+                share_premium_account_id: a.share_premium,
+            })
+            .await
+            .unwrap();
+        let holder = svc
+            .register_shareholder(NewShareholder {
+                party_id: None,
+                name: "Alice".into(),
+                holder_type: "individual".into(),
+            })
+            .await
+            .unwrap();
+        (svc, a, class, holder)
+    })
+    .await
+    .unwrap();
+    (company, scope, svc, a, class, holder)
 }
 
 // EGC-1 — issuing 100 shares @ 1,500 (par 1,000) posts Dr Bank 150,000 · Cr Capital 100,000 · Cr Premium
@@ -133,14 +136,26 @@ async fn egc2_issue_at_par_has_no_premium_line() {
 async fn egc3_transfer_moves_ownership_no_gl() {
     let pool = pool().await;
     let (_company, scope, svc, a, class, alice) = setup(&pool).await;
-    let bob = svc
-        .register_shareholder(NewShareholder {
-            party_id: None,
-            name: "Bob".into(),
-            holder_type: "individual".into(),
-        })
-        .await
-        .unwrap();
+    // The guard demands an ambient acting unit for every insert, so the
+    // extra holder registers inside the same request scope.
+    let scope_pool = pool.clone();
+    let (bob, svc) = with_org_request_scope(
+        &scope_pool,
+        scope.clone(),
+        async move {
+            let bob = svc
+                .register_shareholder(NewShareholder {
+                    party_id: None,
+                    name: "Bob".into(),
+                    holder_type: "individual".into(),
+                })
+                .await
+                .unwrap();
+            (bob, svc)
+        },
+    )
+    .await
+    .unwrap();
     let gl = CountingGl::new();
     with_org_request_scope(
         &pool,
@@ -354,14 +369,26 @@ async fn egc5_declare_then_pay_dividend() {
 async fn egc6_holdings_and_dividend_allocations() {
     let pool = pool().await;
     let (_company, scope, svc, a, class, alice) = setup(&pool).await;
-    let bob = svc
-        .register_shareholder(NewShareholder {
-            party_id: None,
-            name: "Bob".into(),
-            holder_type: "individual".into(),
-        })
-        .await
-        .unwrap();
+    // The guard demands an ambient acting unit for every insert, so the
+    // extra holder registers inside the same request scope.
+    let scope_pool = pool.clone();
+    let (bob, svc) = with_org_request_scope(
+        &scope_pool,
+        scope.clone(),
+        async move {
+            let bob = svc
+                .register_shareholder(NewShareholder {
+                    party_id: None,
+                    name: "Bob".into(),
+                    holder_type: "individual".into(),
+                })
+                .await
+                .unwrap();
+            (bob, svc)
+        },
+    )
+    .await
+    .unwrap();
     let gl = CountingGl::new();
     for (h, q) in [(alice, "70"), (bob, "30")] {
         with_org_request_scope(

@@ -5,10 +5,10 @@
 //! DTOs provide a clean separation between domain entities and API
 //! representations, with validation and OpenAPI documentation support.
 
-use chrono::{DateTime, Utc};
-use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
+use chrono::{DateTime, Utc};
+use rust_decimal::Decimal;
 
 #[cfg(feature = "openapi")]
 #[cfg(feature = "openapi")]
@@ -17,8 +17,8 @@ use utoipa::ToSchema;
 #[cfg(feature = "validation")]
 use validator::Validate;
 
-use crate::domain::entity::AuditMetadata;
 use crate::domain::entity::ShareClass;
+use crate::domain::entity::AuditMetadata;
 use crate::domain::entity::ShareClassStatus;
 
 // =============================================================================
@@ -45,16 +45,10 @@ pub struct CreateShareClassDto {
     #[cfg_attr(feature = "validation", validate(length(max = 3)))]
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     pub currency: String,
-    #[cfg_attr(
-        feature = "openapi",
-        schema(example = "550e8400-e29b-41d4-a716-446655440000")
-    )]
+    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(alias = "share_capital_account_id")]
     pub share_capital_account_id: Uuid,
-    #[cfg_attr(
-        feature = "openapi",
-        schema(example = "550e8400-e29b-41d4-a716-446655440000")
-    )]
+    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(alias = "share_premium_account_id")]
     pub share_premium_account_id: Uuid,
     pub status: ShareClassStatus,
@@ -84,16 +78,10 @@ pub struct UpdateShareClassDto {
     #[cfg_attr(feature = "validation", validate(length(max = 3)))]
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     pub currency: String,
-    #[cfg_attr(
-        feature = "openapi",
-        schema(example = "550e8400-e29b-41d4-a716-446655440000")
-    )]
+    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(alias = "share_capital_account_id")]
     pub share_capital_account_id: Uuid,
-    #[cfg_attr(
-        feature = "openapi",
-        schema(example = "550e8400-e29b-41d4-a716-446655440000")
-    )]
+    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(alias = "share_premium_account_id")]
     pub share_premium_account_id: Uuid,
     pub status: ShareClassStatus,
@@ -126,23 +114,11 @@ pub struct PatchShareClassDto {
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub currency: Option<String>,
-    #[cfg_attr(
-        feature = "openapi",
-        schema(example = "550e8400-e29b-41d4-a716-446655440000")
-    )]
-    #[serde(
-        skip_serializing_if = "Option::is_none",
-        alias = "share_capital_account_id"
-    )]
+    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
+    #[serde(skip_serializing_if = "Option::is_none", alias = "share_capital_account_id")]
     pub share_capital_account_id: Option<Uuid>,
-    #[cfg_attr(
-        feature = "openapi",
-        schema(example = "550e8400-e29b-41d4-a716-446655440000")
-    )]
-    #[serde(
-        skip_serializing_if = "Option::is_none",
-        alias = "share_premium_account_id"
-    )]
+    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
+    #[serde(skip_serializing_if = "Option::is_none", alias = "share_premium_account_id")]
     pub share_premium_account_id: Option<Uuid>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub status: Option<ShareClassStatus>,
@@ -151,13 +127,7 @@ pub struct PatchShareClassDto {
 impl PatchShareClassDto {
     /// Check if any field is set
     pub fn has_changes(&self) -> bool {
-        self.code.is_some()
-            || self.name.is_some()
-            || self.par_value.is_some()
-            || self.currency.is_some()
-            || self.share_capital_account_id.is_some()
-            || self.share_premium_account_id.is_some()
-            || self.status.is_some()
+        self.code.is_some() || self.name.is_some() || self.par_value.is_some() || self.currency.is_some() || self.share_capital_account_id.is_some() || self.share_premium_account_id.is_some() || self.status.is_some()
     }
 }
 
@@ -173,10 +143,7 @@ impl PatchShareClassDto {
 #[cfg_attr(feature = "openapi", derive(ToSchema))]
 #[serde(rename_all = "camelCase")]
 pub struct ShareClassResponseDto {
-    #[cfg_attr(
-        feature = "openapi",
-        schema(example = "550e8400-e29b-41d4-a716-446655440000")
-    )]
+    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     pub id: Uuid,
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     pub code: String,
@@ -185,15 +152,9 @@ pub struct ShareClassResponseDto {
     pub par_value: Decimal,
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     pub currency: String,
-    #[cfg_attr(
-        feature = "openapi",
-        schema(example = "550e8400-e29b-41d4-a716-446655440000")
-    )]
+    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     pub share_capital_account_id: Uuid,
-    #[cfg_attr(
-        feature = "openapi",
-        schema(example = "550e8400-e29b-41d4-a716-446655440000")
-    )]
+    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     pub share_premium_account_id: Uuid,
     pub status: ShareClassStatus,
     pub metadata: AuditMetadata,

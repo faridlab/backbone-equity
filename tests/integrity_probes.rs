@@ -17,36 +17,39 @@ use uuid::Uuid;
 async fn setup(
     pool: &sqlx::PgPool,
 ) -> (Uuid, OrgScope, EquityWriteService, EqAccounts, Uuid, Uuid) {
-    let company = Uuid::new_v4();
-    let svc = EquityWriteService::new(pool.clone());
-    let a = eq_accounts(pool, company).await;
-    let class = svc
-        .register_share_class(NewShareClass {
-            code: "ORD".into(),
-            name: "Ordinary".into(),
-            par_value: dec("1000"),
-            currency: "IDR".into(),
-            share_capital_account_id: a.share_capital,
-            share_premium_account_id: a.share_premium,
-        })
-        .await
-        .unwrap();
-    let holder = svc
-        .register_shareholder(NewShareholder {
-            party_id: None,
-            name: "Alice".into(),
-            holder_type: "individual".into(),
-        })
-        .await
-        .unwrap();
-    (
-        company,
-        OrgScope::for_company_unit(company),
-        svc,
-        a,
-        class,
-        holder,
-    )
+    let company = company_node(pool).await;
+    let scope = OrgScope::for_company_unit(company);
+    // The stripped schema guards every insert: the fixture's own writes run
+    // inside the same request scope the test stands in for.
+    let scope_pool = pool.clone();
+    let inner_pool = pool.clone();
+    let (svc, a, class, holder) = with_org_request_scope(&scope_pool, scope.clone(), async move {
+        let svc = EquityWriteService::new(inner_pool.clone());
+        let a = eq_accounts(&inner_pool, company).await;
+        let class = svc
+            .register_share_class(NewShareClass {
+                code: "ORD".into(),
+                name: "Ordinary".into(),
+                par_value: dec("1000"),
+                currency: "IDR".into(),
+                share_capital_account_id: a.share_capital,
+                share_premium_account_id: a.share_premium,
+            })
+            .await
+            .unwrap();
+        let holder = svc
+            .register_shareholder(NewShareholder {
+                party_id: None,
+                name: "Alice".into(),
+                holder_type: "individual".into(),
+            })
+            .await
+            .unwrap();
+        (svc, a, class, holder)
+    })
+    .await
+    .unwrap();
+    (company, scope, svc, a, class, holder)
 }
 
 // EIP-1 — an issue below par value is refused (capital cannot be booked below its nominal).

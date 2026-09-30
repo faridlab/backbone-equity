@@ -22,6 +22,44 @@ pub fn dburl() -> String {
 pub async fn pool() -> PgPool {
     PgPool::connect(&dburl()).await.expect("connect")
 }
+
+/// The org spine the tenancy guards read (ADR-0029): accounting's org-unit kind guard
+/// resolves `org_unit_id` against `organization.org_units`, so the fixture ensures the
+/// minimal spine exists and mints a fresh company node for the test to scope to.
+/// Idempotent — safe on a database that already carries the real spine.
+pub async fn company_node(pool: &PgPool) -> Uuid {
+    if let Err(e) = sqlx::raw_sql(
+        "CREATE SCHEMA IF NOT EXISTS organization; \
+         CREATE TABLE IF NOT EXISTS organization.org_units ( \
+             id uuid PRIMARY KEY, kind text NOT NULL, parent_id uuid, \
+             code text, name text NOT NULL, metadata jsonb NOT NULL DEFAULT '{}' \
+         );",
+    )
+    .execute(pool)
+    .await
+    {
+        // A sibling test may have created the spine concurrently (CREATE IF NOT
+        // EXISTS still races in pg_catalog); only a real absence is fatal.
+        let present: Option<bool> =
+            sqlx::query_scalar("SELECT to_regclass('organization.org_units') IS NOT NULL")
+                .fetch_one(pool)
+                .await
+                .ok();
+        if present != Some(true) {
+            panic!("ensure org spine: {e}");
+        }
+    }
+    let company = Uuid::new_v4();
+    sqlx::query(
+        "INSERT INTO organization.org_units (id, kind, parent_id, code, name) \
+         VALUES ($1,'company',NULL,'EQ-CO','Equity seam company')",
+    )
+    .bind(company)
+    .execute(pool)
+    .await
+    .expect("mint company node");
+    company
+}
 pub fn dec(s: &str) -> Decimal {
     s.parse().unwrap()
 }
@@ -29,16 +67,16 @@ pub fn today() -> chrono::NaiveDate {
     chrono::Utc::now().date_naive()
 }
 
-pub async fn account(pool: &PgPool, company: Uuid, code: &str, atype: &str, subtype: &str, normal: &str) -> Uuid {
+pub async fn account(pool: &PgPool, org_unit: Uuid, code: &str, atype: &str, subtype: &str, normal: &str) -> Uuid {
     let id = Uuid::new_v4();
     sqlx::query(
         r#"INSERT INTO accounting.accounts
-             (id, company_id, account_number, account_code, name, account_type, account_subtype,
+             (id, org_unit_id, account_number, account_code, name, account_type, account_subtype,
               normal_balance, is_header, is_detail, status)
            VALUES ($1,$2,$3,$4,$5,$6::account_type,$7::account_subtype,$8::normal_balance,
                    false,true,'active'::account_status)"#,
     )
-    .bind(id).bind(company).bind(code).bind(code).bind(code).bind(atype).bind(subtype).bind(normal)
+    .bind(id).bind(org_unit).bind(code).bind(code).bind(code).bind(atype).bind(subtype).bind(normal)
     .execute(pool).await.expect("seed account");
     id
 }
@@ -56,13 +94,13 @@ pub struct EqAccounts {
     pub retained_earnings: Uuid,
     pub dividend_payable: Uuid,
 }
-pub async fn eq_accounts(pool: &PgPool, company: Uuid) -> EqAccounts {
+pub async fn eq_accounts(pool: &PgPool, org_unit: Uuid) -> EqAccounts {
     EqAccounts {
-        bank: account(pool, company, "1000-BANK", "asset", "bank", "debit").await,
-        share_capital: account(pool, company, "3000-CAP", "equity", "paid_in_capital", "credit").await,
-        share_premium: account(pool, company, "3100-PREM", "equity", "paid_in_capital", "credit").await,
-        retained_earnings: account(pool, company, "3900-RE", "equity", "retained_earnings", "credit").await,
-        dividend_payable: account(pool, company, "2300-DIV", "liability", "current_liability", "credit").await,
+        bank: account(pool, org_unit, "1000-BANK", "asset", "bank", "debit").await,
+        share_capital: account(pool, org_unit, "3000-CAP", "equity", "paid_in_capital", "credit").await,
+        share_premium: account(pool, org_unit, "3100-PREM", "equity", "paid_in_capital", "credit").await,
+        retained_earnings: account(pool, org_unit, "3900-RE", "equity", "retained_earnings", "credit").await,
+        dividend_payable: account(pool, org_unit, "2300-DIV", "liability", "current_liability", "credit").await,
     }
 }
 
@@ -88,7 +126,7 @@ impl GlPostSink for GlAdapter {
         }).collect();
         match self.svc.post(r, None).await {
             Ok(x) => Ok(GlPostAck { post_id: x.post_id, journal_id: x.journal_id, idempotent_reuse: x.idempotent_reuse }),
-            Err(x) => Err(GlPostRejected { code: x.code().to_string(), message: x.to_string() }),
+            Err(x) => Err(GlPostRejected { code: x.code().to_string(), message: x.to_string() })
         }
     }
 }

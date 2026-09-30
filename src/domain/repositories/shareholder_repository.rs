@@ -5,11 +5,11 @@
 //! This trait defines the repository contract for the Shareholder aggregate.
 //! Implementation is in the infrastructure layer.
 
-use anyhow::Result;
 use async_trait::async_trait;
+use anyhow::Result;
 use uuid::Uuid;
 
-use crate::domain::entity::{HolderType, Shareholder};
+use crate::domain::entity::{Shareholder, HolderType};
 
 /// Pagination parameters for list queries
 #[derive(Debug, Clone, Default)]
@@ -62,6 +62,7 @@ impl ShareholderFilter {
 /// Implementations should be in the infrastructure layer.
 #[async_trait]
 pub trait ShareholderRepository: Send + Sync {
+
     // =========================================================================
     // Core CRUD Operations
     // =========================================================================
@@ -86,15 +87,10 @@ pub trait ShareholderRepository: Send + Sync {
     // =========================================================================
 
     /// List shareholder with pagination
-    async fn list(&self, params: ShareholderPaginationParams)
-        -> Result<ShareholderPaginatedResult>;
+    async fn list(&self, params: ShareholderPaginationParams) -> Result<ShareholderPaginatedResult>;
 
     /// List shareholder with pagination and filters
-    async fn list_with_filters(
-        &self,
-        params: ShareholderPaginationParams,
-        filters: ShareholderFilter,
-    ) -> Result<ShareholderPaginatedResult>;
+    async fn list_with_filters(&self, params: ShareholderPaginationParams, filters: ShareholderFilter) -> Result<ShareholderPaginatedResult>;
 
     /// Count all shareholder entities
     async fn count(&self) -> Result<u64>;
@@ -116,10 +112,7 @@ pub trait ShareholderRepository: Send + Sync {
     async fn restore(&self, id: &str) -> Result<Option<Shareholder>>;
 
     /// List soft-deleted shareholder entities
-    async fn list_deleted(
-        &self,
-        params: ShareholderPaginationParams,
-    ) -> Result<ShareholderPaginatedResult>;
+    async fn list_deleted(&self, params: ShareholderPaginationParams) -> Result<ShareholderPaginatedResult>;
 
     /// Empty trash (permanently delete all soft-deleted entities)
     async fn empty_trash(&self) -> Result<u64>;

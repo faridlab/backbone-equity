@@ -250,18 +250,18 @@ impl ShareTransactionRepository {
 
     /// Every holder's non-zero position in a class, largest first.
     ///
-    /// Runs on the pool through `fetch_all_rows_scoped`: it rides the request-dedicated connection
-    /// when the composing service bound one — under a decorated deployment a bare-pool read would
-    /// land on a fresh connection with no fence variables and return nothing — and falls back to a
-    /// plain pool read otherwise. (The legacy company_scope helper's task-local branch is never
-    /// taken: a stripped module sets no legacy scope. The tenant-agnostic `org_scope` module has no
-    /// fetch-all twin yet; when it gains one, this call should move to it.)
+    /// Runs on the pool through `org_scope::fetch_all_rows_scoped`: it rides the
+    /// request-dedicated connection when the composing service bound one — under a decorated
+    /// deployment a bare-pool read would land on a fresh connection with no fence variables
+    /// and return nothing — and falls back to a plain pool read otherwise. The query owes no
+    /// company predicate, so the tenant-agnostic helper is the honest mount, not the
+    /// company-scoped one ridden purely for its connection pinning.
     pub async fn holdings(
         &self,
         pool: &PgPool,
         class_id: Uuid,
     ) -> Result<Vec<HoldingRow>, sqlx::Error> {
-        let rows = backbone_orm::company_scope::fetch_all_rows_scoped(
+        let rows = backbone_orm::org_scope::fetch_all_rows_scoped(
             pool,
             sqlx::query(
                 r#"SELECT shareholder_id,

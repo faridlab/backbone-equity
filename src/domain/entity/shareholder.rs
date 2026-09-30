@@ -3,8 +3,8 @@ use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use uuid::Uuid;
 
-use super::AuditMetadata;
 use super::HolderType;
+use super::AuditMetadata;
 
 /// Strongly-typed ID for Shareholder
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -12,15 +12,9 @@ use super::HolderType;
 pub struct ShareholderId(pub Uuid);
 
 impl ShareholderId {
-    pub fn new(id: Uuid) -> Self {
-        Self(id)
-    }
-    pub fn generate() -> Self {
-        Self(Uuid::new_v4())
-    }
-    pub fn into_inner(self) -> Uuid {
-        self.0
-    }
+    pub fn new(id: Uuid) -> Self { Self(id) }
+    pub fn generate() -> Self { Self(Uuid::new_v4()) }
+    pub fn into_inner(self) -> Uuid { self.0 }
 }
 
 impl std::fmt::Display for ShareholderId {
@@ -37,28 +31,20 @@ impl std::str::FromStr for ShareholderId {
 }
 
 impl From<Uuid> for ShareholderId {
-    fn from(id: Uuid) -> Self {
-        Self(id)
-    }
+    fn from(id: Uuid) -> Self { Self(id) }
 }
 
 impl From<ShareholderId> for Uuid {
-    fn from(id: ShareholderId) -> Self {
-        id.0
-    }
+    fn from(id: ShareholderId) -> Self { id.0 }
 }
 
 impl AsRef<Uuid> for ShareholderId {
-    fn as_ref(&self) -> &Uuid {
-        &self.0
-    }
+    fn as_ref(&self) -> &Uuid { &self.0 }
 }
 
 impl std::ops::Deref for ShareholderId {
     type Target = Uuid;
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
+    fn deref(&self) -> &Self::Target { &self.0 }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
@@ -139,6 +125,7 @@ impl Shareholder {
         self.metadata.deleted_by.as_ref()
     }
 
+
     // ==========================================================
     // Fluent Setters (with_* for optional fields)
     // ==========================================================
@@ -158,19 +145,13 @@ impl Shareholder {
         for (key, value) in fields {
             match key.as_str() {
                 "party_id" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.party_id = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.party_id = v; }
                 }
                 "name" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.name = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.name = v; }
                 }
                 "holder_type" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.holder_type = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.holder_type = v; }
                 }
                 _ => {} // ignore unknown fields
             }

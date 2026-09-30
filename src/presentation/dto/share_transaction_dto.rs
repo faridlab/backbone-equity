@@ -5,10 +5,10 @@
 //! DTOs provide a clean separation between domain entities and API
 //! representations, with validation and OpenAPI documentation support.
 
-use chrono::{DateTime, NaiveDate, Utc};
-use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
+use chrono::{DateTime, Utc, NaiveDate};
+use rust_decimal::Decimal;
 
 #[cfg(feature = "openapi")]
 #[cfg(feature = "openapi")]
@@ -17,8 +17,8 @@ use utoipa::ToSchema;
 #[cfg(feature = "validation")]
 use validator::Validate;
 
-use crate::domain::entity::AuditMetadata;
 use crate::domain::entity::ShareTransaction;
+use crate::domain::entity::AuditMetadata;
 use crate::domain::entity::ShareTxnType;
 
 // =============================================================================
@@ -34,16 +34,10 @@ use crate::domain::entity::ShareTxnType;
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct CreateShareTransactionDto {
-    #[cfg_attr(
-        feature = "openapi",
-        schema(example = "550e8400-e29b-41d4-a716-446655440000")
-    )]
+    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(alias = "share_class_id")]
     pub share_class_id: Uuid,
-    #[cfg_attr(
-        feature = "openapi",
-        schema(example = "550e8400-e29b-41d4-a716-446655440000")
-    )]
+    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(alias = "shareholder_id")]
     pub shareholder_id: Uuid,
     #[serde(alias = "txn_type")]
@@ -52,24 +46,12 @@ pub struct CreateShareTransactionDto {
     #[serde(alias = "price_per_share")]
     pub price_per_share: Decimal,
     pub amount: Decimal,
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        alias = "counterparty_shareholder_id"
-    )]
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "counterparty_shareholder_id")]
     pub counterparty_shareholder_id: Option<Uuid>,
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        alias = "transfer_group_id"
-    )]
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "transfer_group_id")]
     pub transfer_group_id: Option<Uuid>,
     #[cfg_attr(feature = "validation", validate(length(max = 80)))]
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        alias = "posting_reference"
-    )]
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "posting_reference")]
     pub posting_reference: Option<String>,
     #[cfg_attr(feature = "openapi", schema(example = "2024-01-01"))]
     #[serde(alias = "txn_date")]
@@ -92,16 +74,10 @@ pub struct CreateShareTransactionDto {
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateShareTransactionDto {
-    #[cfg_attr(
-        feature = "openapi",
-        schema(example = "550e8400-e29b-41d4-a716-446655440000")
-    )]
+    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(alias = "share_class_id")]
     pub share_class_id: Uuid,
-    #[cfg_attr(
-        feature = "openapi",
-        schema(example = "550e8400-e29b-41d4-a716-446655440000")
-    )]
+    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(alias = "shareholder_id")]
     pub shareholder_id: Uuid,
     #[serde(alias = "txn_type")]
@@ -110,24 +86,12 @@ pub struct UpdateShareTransactionDto {
     #[serde(alias = "price_per_share")]
     pub price_per_share: Decimal,
     pub amount: Decimal,
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        alias = "counterparty_shareholder_id"
-    )]
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "counterparty_shareholder_id")]
     pub counterparty_shareholder_id: Option<Uuid>,
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        alias = "transfer_group_id"
-    )]
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "transfer_group_id")]
     pub transfer_group_id: Option<Uuid>,
     #[cfg_attr(feature = "validation", validate(length(max = 80)))]
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        alias = "posting_reference"
-    )]
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "posting_reference")]
     pub posting_reference: Option<String>,
     #[cfg_attr(feature = "openapi", schema(example = "2024-01-01"))]
     #[serde(alias = "txn_date")]
@@ -150,16 +114,10 @@ pub struct UpdateShareTransactionDto {
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct PatchShareTransactionDto {
-    #[cfg_attr(
-        feature = "openapi",
-        schema(example = "550e8400-e29b-41d4-a716-446655440000")
-    )]
+    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "share_class_id")]
     pub share_class_id: Option<Uuid>,
-    #[cfg_attr(
-        feature = "openapi",
-        schema(example = "550e8400-e29b-41d4-a716-446655440000")
-    )]
+    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "shareholder_id")]
     pub shareholder_id: Option<Uuid>,
     #[serde(skip_serializing_if = "Option::is_none", alias = "txn_type")]
@@ -170,10 +128,7 @@ pub struct PatchShareTransactionDto {
     pub price_per_share: Option<Decimal>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub amount: Option<Decimal>,
-    #[serde(
-        skip_serializing_if = "Option::is_none",
-        alias = "counterparty_shareholder_id"
-    )]
+    #[serde(skip_serializing_if = "Option::is_none", alias = "counterparty_shareholder_id")]
     pub counterparty_shareholder_id: Option<Uuid>,
     #[serde(skip_serializing_if = "Option::is_none", alias = "transfer_group_id")]
     pub transfer_group_id: Option<Uuid>,
@@ -191,17 +146,7 @@ pub struct PatchShareTransactionDto {
 impl PatchShareTransactionDto {
     /// Check if any field is set
     pub fn has_changes(&self) -> bool {
-        self.share_class_id.is_some()
-            || self.shareholder_id.is_some()
-            || self.txn_type.is_some()
-            || self.quantity.is_some()
-            || self.price_per_share.is_some()
-            || self.amount.is_some()
-            || self.counterparty_shareholder_id.is_some()
-            || self.transfer_group_id.is_some()
-            || self.posting_reference.is_some()
-            || self.txn_date.is_some()
-            || self.gl_posted.is_some()
+        self.share_class_id.is_some() || self.shareholder_id.is_some() || self.txn_type.is_some() || self.quantity.is_some() || self.price_per_share.is_some() || self.amount.is_some() || self.counterparty_shareholder_id.is_some() || self.transfer_group_id.is_some() || self.posting_reference.is_some() || self.txn_date.is_some() || self.gl_posted.is_some()
     }
 }
 
@@ -217,20 +162,11 @@ impl PatchShareTransactionDto {
 #[cfg_attr(feature = "openapi", derive(ToSchema))]
 #[serde(rename_all = "camelCase")]
 pub struct ShareTransactionResponseDto {
-    #[cfg_attr(
-        feature = "openapi",
-        schema(example = "550e8400-e29b-41d4-a716-446655440000")
-    )]
+    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     pub id: Uuid,
-    #[cfg_attr(
-        feature = "openapi",
-        schema(example = "550e8400-e29b-41d4-a716-446655440000")
-    )]
+    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     pub share_class_id: Uuid,
-    #[cfg_attr(
-        feature = "openapi",
-        schema(example = "550e8400-e29b-41d4-a716-446655440000")
-    )]
+    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     pub shareholder_id: Uuid,
     pub txn_type: ShareTxnType,
     pub quantity: Decimal,
@@ -276,12 +212,7 @@ pub struct ShareTransactionListResponseDto {
 
 impl ShareTransactionListResponseDto {
     /// Create a new list response from items and pagination info
-    pub fn new(
-        items: Vec<ShareTransactionResponseDto>,
-        total: u64,
-        page: u32,
-        per_page: u32,
-    ) -> Self {
+    pub fn new(items: Vec<ShareTransactionResponseDto>, total: u64, page: u32, per_page: u32) -> Self {
         let total_pages = if per_page > 0 {
             ((total as f64) / (per_page as f64)).ceil() as u32
         } else {
@@ -395,10 +326,7 @@ impl backbone_core::FromCreateDto<CreateShareTransactionDto> for ShareTransactio
 }
 
 impl backbone_core::ApplyUpdateDto<UpdateShareTransactionDto> for ShareTransaction {
-    fn apply_update(
-        mut self,
-        dto: UpdateShareTransactionDto,
-    ) -> backbone_core::ServiceResult<Self> {
+    fn apply_update(mut self, dto: UpdateShareTransactionDto) -> backbone_core::ServiceResult<Self> {
         self.share_class_id = dto.share_class_id;
         self.shareholder_id = dto.shareholder_id;
         self.txn_type = dto.txn_type;

@@ -5,8 +5,8 @@
 //! This trait defines the repository contract for the Dividend aggregate.
 //! Implementation is in the infrastructure layer.
 
-use anyhow::Result;
 use async_trait::async_trait;
+use anyhow::Result;
 use uuid::Uuid;
 
 use crate::domain::entity::{Dividend, DividendStatus};
@@ -53,10 +53,7 @@ pub struct DividendFilter {
 impl DividendFilter {
     /// Check if any filter is set
     pub fn has_filters(&self) -> bool {
-        self.share_class_id.is_some()
-            || self.status.is_some()
-            || self.retained_earnings_account_id.is_some()
-            || self.dividend_payable_account_id.is_some()
+        self.share_class_id.is_some() || self.status.is_some() || self.retained_earnings_account_id.is_some() || self.dividend_payable_account_id.is_some()
     }
 }
 
@@ -66,6 +63,7 @@ impl DividendFilter {
 /// Implementations should be in the infrastructure layer.
 #[async_trait]
 pub trait DividendRepository: Send + Sync {
+
     // =========================================================================
     // Core CRUD Operations
     // =========================================================================
@@ -93,11 +91,7 @@ pub trait DividendRepository: Send + Sync {
     async fn list(&self, params: DividendPaginationParams) -> Result<DividendPaginatedResult>;
 
     /// List dividend with pagination and filters
-    async fn list_with_filters(
-        &self,
-        params: DividendPaginationParams,
-        filters: DividendFilter,
-    ) -> Result<DividendPaginatedResult>;
+    async fn list_with_filters(&self, params: DividendPaginationParams, filters: DividendFilter) -> Result<DividendPaginatedResult>;
 
     /// Count all dividend entities
     async fn count(&self) -> Result<u64>;
@@ -119,10 +113,7 @@ pub trait DividendRepository: Send + Sync {
     async fn restore(&self, id: &str) -> Result<Option<Dividend>>;
 
     /// List soft-deleted dividend entities
-    async fn list_deleted(
-        &self,
-        params: DividendPaginationParams,
-    ) -> Result<DividendPaginatedResult>;
+    async fn list_deleted(&self, params: DividendPaginationParams) -> Result<DividendPaginatedResult>;
 
     /// Empty trash (permanently delete all soft-deleted entities)
     async fn empty_trash(&self) -> Result<u64>;

@@ -12,7 +12,6 @@ pub mod shareholder_api_test;
 pub mod share_transaction_api_test;
 
 // Re-exports for convenience
-pub use crud_test_base::*;
 pub use dividend_api_test::*;
 pub use share_class_api_test::*;
 pub use shareholder_api_test::*;

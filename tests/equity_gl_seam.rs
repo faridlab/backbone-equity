@@ -18,28 +18,39 @@ use rust_decimal::Decimal;
 use uuid::Uuid;
 
 async fn setup(pool: &sqlx::PgPool) -> (Uuid, EquityWriteService, EqAccounts, Uuid, Uuid) {
-    let company = Uuid::new_v4();
-    let svc = EquityWriteService::new(pool.clone());
-    let a = eq_accounts(pool, company).await;
-    let class = svc
-        .register_share_class(NewShareClass {
-            code: "ORD".into(),
-            name: "Ordinary".into(),
-            par_value: dec("1000"),
-            currency: "IDR".into(),
-            share_capital_account_id: a.share_capital,
-            share_premium_account_id: a.share_premium,
-        })
-        .await
-        .unwrap();
-    let holder = svc
-        .register_shareholder(NewShareholder {
-            party_id: None,
-            name: "Alice".into(),
-            holder_type: "individual".into(),
-        })
-        .await
-        .unwrap();
+    let company = company_node(pool).await;
+    // The stripped schema guards every insert: org_unit_id comes from the
+    // ambient scope's acting unit, so the fixture's own writes run inside the
+    // same request scope the test stands in for.
+    let scope = OrgScope::for_company_unit(company);
+    let scope_pool = pool.clone();
+    let inner_pool = pool.clone();
+    let (svc, a, class, holder) = with_org_request_scope(&scope_pool, scope, async move {
+        let svc = EquityWriteService::new(inner_pool.clone());
+        let a = eq_accounts(&inner_pool, company).await;
+        let class = svc
+            .register_share_class(NewShareClass {
+                code: "ORD".into(),
+                name: "Ordinary".into(),
+                par_value: dec("1000"),
+                currency: "IDR".into(),
+                share_capital_account_id: a.share_capital,
+                share_premium_account_id: a.share_premium,
+            })
+            .await
+            .unwrap();
+        let holder = svc
+            .register_shareholder(NewShareholder {
+                party_id: None,
+                name: "Alice".into(),
+                holder_type: "individual".into(),
+            })
+            .await
+            .unwrap();
+        (svc, a, class, holder)
+    })
+    .await
+    .unwrap();
     (company, svc, a, class, holder)
 }
 

@@ -5,11 +5,11 @@
 //! Tests the ShareTransaction CRUD API endpoints.
 
 use chrono::Utc;
+use crate::integration::framework::ApiTest;
 use serde_json::{json, Value};
 use uuid::Uuid;
 
 use super::crud_test_base::{CrudTestConfig, GenericCrudTest, TestDataGenerator};
-use crate::integration::framework::ApiTest;
 use crate::integration::helpers::CommonUtils;
 
 // ============================================================================
@@ -21,7 +21,6 @@ pub struct ShareTransactionTestData;
 
 impl TestDataGenerator for ShareTransactionTestData {
     fn generate_create_payload(&self, _utils: &CommonUtils) -> Value {
-        let now = Utc::now().to_rfc3339();
         json!({
             "id": Uuid::new_v4().to_string(),
             "share_class_id": Uuid::new_v4().to_string(),
@@ -40,7 +39,6 @@ impl TestDataGenerator for ShareTransactionTestData {
     }
 
     fn generate_update_payload(&self, id: &str, _utils: &CommonUtils) -> Value {
-        let now = Utc::now().to_rfc3339();
         json!({
             "id": id,
             "share_class_id": Uuid::new_v4().to_string(),
@@ -66,22 +64,10 @@ impl TestDataGenerator for ShareTransactionTestData {
 
     async fn seed_dependencies(&self, api: &ApiTest) -> Vec<(String, String)> {
         let mut deps: Vec<(String, String)> = Vec::new();
-        if let Some(id) = super::crud_test_base::create_and_get_id(
-            api,
-            "/api/v1/share_classes",
-            &super::share_class_api_test::ShareClassTestData,
-        )
-        .await
-        {
+        if let Some(id) = super::crud_test_base::create_and_get_id(api, "/api/v1/share_classes", &super::share_class_api_test::ShareClassTestData).await {
             deps.push(("share_class_id".to_string(), id));
         }
-        if let Some(id) = super::crud_test_base::create_and_get_id(
-            api,
-            "/api/v1/shareholders",
-            &super::shareholder_api_test::ShareholderTestData,
-        )
-        .await
-        {
+        if let Some(id) = super::crud_test_base::create_and_get_id(api, "/api/v1/shareholders", &super::shareholder_api_test::ShareholderTestData).await {
             deps.push(("shareholder_id".to_string(), id));
         }
         deps

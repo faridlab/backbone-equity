@@ -1,11 +1,11 @@
 use chrono::{DateTime, Utc};
-use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use uuid::Uuid;
+use rust_decimal::Decimal;
 
-use super::AuditMetadata;
 use super::ShareClassStatus;
+use super::AuditMetadata;
 
 /// Strongly-typed ID for ShareClass
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -13,15 +13,9 @@ use super::ShareClassStatus;
 pub struct ShareClassId(pub Uuid);
 
 impl ShareClassId {
-    pub fn new(id: Uuid) -> Self {
-        Self(id)
-    }
-    pub fn generate() -> Self {
-        Self(Uuid::new_v4())
-    }
-    pub fn into_inner(self) -> Uuid {
-        self.0
-    }
+    pub fn new(id: Uuid) -> Self { Self(id) }
+    pub fn generate() -> Self { Self(Uuid::new_v4()) }
+    pub fn into_inner(self) -> Uuid { self.0 }
 }
 
 impl std::fmt::Display for ShareClassId {
@@ -38,28 +32,20 @@ impl std::str::FromStr for ShareClassId {
 }
 
 impl From<Uuid> for ShareClassId {
-    fn from(id: Uuid) -> Self {
-        Self(id)
-    }
+    fn from(id: Uuid) -> Self { Self(id) }
 }
 
 impl From<ShareClassId> for Uuid {
-    fn from(id: ShareClassId) -> Self {
-        id.0
-    }
+    fn from(id: ShareClassId) -> Self { id.0 }
 }
 
 impl AsRef<Uuid> for ShareClassId {
-    fn as_ref(&self) -> &Uuid {
-        &self.0
-    }
+    fn as_ref(&self) -> &Uuid { &self.0 }
 }
 
 impl std::ops::Deref for ShareClassId {
     type Target = Uuid;
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
+    fn deref(&self) -> &Self::Target { &self.0 }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
@@ -84,15 +70,7 @@ impl ShareClass {
     }
 
     /// Create a new ShareClass with required fields
-    pub fn new(
-        code: String,
-        name: String,
-        par_value: Decimal,
-        currency: String,
-        share_capital_account_id: Uuid,
-        share_premium_account_id: Uuid,
-        status: ShareClassStatus,
-    ) -> Self {
+    pub fn new(code: String, name: String, par_value: Decimal, currency: String, share_capital_account_id: Uuid, share_premium_account_id: Uuid, status: ShareClassStatus) -> Self {
         Self {
             id: Uuid::new_v4(),
             code,
@@ -161,6 +139,7 @@ impl ShareClass {
         &self.status
     }
 
+
     // ==========================================================
     // Partial Update
     // ==========================================================
@@ -170,39 +149,25 @@ impl ShareClass {
         for (key, value) in fields {
             match key.as_str() {
                 "code" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.code = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.code = v; }
                 }
                 "name" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.name = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.name = v; }
                 }
                 "par_value" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.par_value = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.par_value = v; }
                 }
                 "currency" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.currency = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.currency = v; }
                 }
                 "share_capital_account_id" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.share_capital_account_id = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.share_capital_account_id = v; }
                 }
                 "share_premium_account_id" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.share_premium_account_id = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.share_premium_account_id = v; }
                 }
                 "status" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.status = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.status = v; }
                 }
                 _ => {} // ignore unknown fields
             }
@@ -332,18 +297,10 @@ impl ShareClassBuilder {
     pub fn build(self) -> Result<ShareClass, String> {
         let code = self.code.ok_or_else(|| "code is required".to_string())?;
         let name = self.name.ok_or_else(|| "name is required".to_string())?;
-        let par_value = self
-            .par_value
-            .ok_or_else(|| "par_value is required".to_string())?;
-        let currency = self
-            .currency
-            .ok_or_else(|| "currency is required".to_string())?;
-        let share_capital_account_id = self
-            .share_capital_account_id
-            .ok_or_else(|| "share_capital_account_id is required".to_string())?;
-        let share_premium_account_id = self
-            .share_premium_account_id
-            .ok_or_else(|| "share_premium_account_id is required".to_string())?;
+        let par_value = self.par_value.ok_or_else(|| "par_value is required".to_string())?;
+        let currency = self.currency.ok_or_else(|| "currency is required".to_string())?;
+        let share_capital_account_id = self.share_capital_account_id.ok_or_else(|| "share_capital_account_id is required".to_string())?;
+        let share_premium_account_id = self.share_premium_account_id.ok_or_else(|| "share_premium_account_id is required".to_string())?;
 
         Ok(ShareClass {
             id: Uuid::new_v4(),
