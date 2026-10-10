@@ -1,6 +1,6 @@
 [package]
 name = "backbone-equity"
-version = "0.7.0"
+version = "0.7.1"
 edition = "2021"
 description = "Cap table + equity accounting: shareholders, share classes, share transactions, dividends (10th GL producer)"
 license = "MIT OR Apache-2.0"
@@ -100,7 +100,7 @@ pretty_assertions = "1.0"
 # The REAL backbone-accounting ledger — the equity GL seam proves the issue/buyback/dividend journals land
 # balanced and accounting accepts source_type='equity'. Dev-dependency ONLY (zero normal Cargo edge); the
 # shipped crate reaches the ledger through the GlPostSink port.
-backbone-accounting = { version = "0.10.0" }
+backbone-accounting = { version = "0.11.0" }
 
 
 # Integration testing framework — the generated tests/integration_tests.rs hits a live server
