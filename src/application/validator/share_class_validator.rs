@@ -18,9 +18,5 @@ pub fn share_class_validator() -> ShareClassValidator {
         .rule(RequiredString::new("code", |e: &ShareClass| &e.code))
         .rule(RequiredString::new("name", |e: &ShareClass| &e.name))
         .rule(RequiredString::new("currency", |e: &ShareClass| &e.currency))
-    // <<< CUSTOM RULES
-    // END CUSTOM RULES
 }
 
-// <<< CUSTOM
-// END CUSTOM

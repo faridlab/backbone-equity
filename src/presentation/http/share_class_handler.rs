@@ -187,3 +187,4 @@ pub fn create_protected_share_class_routes<A: AuthMiddleware + Send + Sync + 'st
             }
         }))
 }
+

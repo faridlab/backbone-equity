@@ -32,5 +32,3 @@ pub type ShareClassService = GenericCrudService<
     ShareClassRepository,
 >;
 
-// <<< CUSTOM
-// END CUSTOM

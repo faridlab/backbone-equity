@@ -11,8 +11,6 @@ use crate::domain::entity::ShareClass;
 /// enum containing a `Crud(CrudEvent<ShareClass>)` variant.
 pub type ShareClassEvent = CrudEvent<ShareClass>;
 
-// <<< CUSTOM
-// END CUSTOM
 
 use backbone_messaging::{CrudEventPublisher, NoOpCrudEventPublisher};
 use std::sync::Arc;

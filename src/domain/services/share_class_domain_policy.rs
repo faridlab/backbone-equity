@@ -18,5 +18,3 @@ use crate::domain::entity::ShareClass;
 /// service. `PermitAllPolicy` is the safe default until then.
 pub type ShareClassDomainPolicy = PermitAllPolicy<ShareClass>;
 
-// <<< CUSTOM
-// END CUSTOM

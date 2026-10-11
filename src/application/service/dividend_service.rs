@@ -32,5 +32,3 @@ pub type DividendService = GenericCrudService<
     DividendRepository,
 >;
 
-// <<< CUSTOM
-// END CUSTOM

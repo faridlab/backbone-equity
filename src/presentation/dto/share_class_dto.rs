@@ -308,7 +308,7 @@ impl backbone_core::ApplyUpdateDto<UpdateShareClassDto> for ShareClass {
 // Custom DTOs
 // =============================================================================
 
-// <<< CUSTOM DTOs
 // Add custom DTOs specific to ShareClass here.
 // This section will be preserved during regeneration.
 // >>> END CUSTOM DTOs
+

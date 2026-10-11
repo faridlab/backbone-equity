@@ -16,9 +16,5 @@ pub type ShareTransactionValidator = EntityValidator<ShareTransaction>;
 pub fn share_transaction_validator() -> ShareTransactionValidator {
     EntityValidator::new()
         .rule(OptionalNotBlank::new("posting_reference", |e: &ShareTransaction| e.posting_reference.as_deref()))
-    // <<< CUSTOM RULES
-    // END CUSTOM RULES
 }
 
-// <<< CUSTOM
-// END CUSTOM

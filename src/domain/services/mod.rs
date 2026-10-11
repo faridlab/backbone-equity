@@ -12,5 +12,3 @@ pub use share_class_domain_policy::ShareClassDomainPolicy;
 pub use shareholder_domain_policy::ShareholderDomainPolicy;
 pub use share_transaction_domain_policy::ShareTransactionDomainPolicy;
 
-// <<< CUSTOM
-// END CUSTOM

@@ -15,5 +15,3 @@ pub use share_class_validator::{ShareClassValidator, share_class_validator};
 pub use shareholder_validator::{ShareholderValidator, shareholder_validator};
 pub use share_transaction_validator::{ShareTransactionValidator, share_transaction_validator};
 
-// <<< CUSTOM
-// END CUSTOM

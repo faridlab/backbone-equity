@@ -18,5 +18,3 @@ use crate::domain::entity::Shareholder;
 /// service. `PermitAllPolicy` is the safe default until then.
 pub type ShareholderDomainPolicy = PermitAllPolicy<Shareholder>;
 
-// <<< CUSTOM
-// END CUSTOM

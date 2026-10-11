@@ -32,5 +32,3 @@ pub type ShareTransactionService = GenericCrudService<
     ShareTransactionRepository,
 >;
 
-// <<< CUSTOM
-// END CUSTOM

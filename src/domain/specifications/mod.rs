@@ -11,5 +11,3 @@ pub mod share_class_specification;
 pub mod shareholder_specification;
 pub mod share_transaction_specification;
 
-// <<< CUSTOM
-// END CUSTOM

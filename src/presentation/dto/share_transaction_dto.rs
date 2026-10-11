@@ -346,7 +346,7 @@ impl backbone_core::ApplyUpdateDto<UpdateShareTransactionDto> for ShareTransacti
 // Custom DTOs
 // =============================================================================
 
-// <<< CUSTOM DTOs
 // Add custom DTOs specific to ShareTransaction here.
 // This section will be preserved during regeneration.
 // >>> END CUSTOM DTOs
+

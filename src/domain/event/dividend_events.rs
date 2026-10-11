@@ -11,8 +11,6 @@ use crate::domain::entity::Dividend;
 /// enum containing a `Crud(CrudEvent<Dividend>)` variant.
 pub type DividendEvent = CrudEvent<Dividend>;
 
-// <<< CUSTOM
-// END CUSTOM
 
 use backbone_messaging::{CrudEventPublisher, NoOpCrudEventPublisher};
 use std::sync::Arc;

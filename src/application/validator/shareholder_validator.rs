@@ -16,9 +16,5 @@ pub type ShareholderValidator = EntityValidator<Shareholder>;
 pub fn shareholder_validator() -> ShareholderValidator {
     EntityValidator::new()
         .rule(RequiredString::new("name", |e: &Shareholder| &e.name))
-    // <<< CUSTOM RULES
-    // END CUSTOM RULES
 }
 
-// <<< CUSTOM
-// END CUSTOM

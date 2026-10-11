@@ -32,5 +32,3 @@ pub type ShareholderService = GenericCrudService<
     ShareholderRepository,
 >;
 
-// <<< CUSTOM
-// END CUSTOM

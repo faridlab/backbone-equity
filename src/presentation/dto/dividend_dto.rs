@@ -323,7 +323,7 @@ impl backbone_core::ApplyUpdateDto<UpdateDividendDto> for Dividend {
 // Custom DTOs
 // =============================================================================
 
-// <<< CUSTOM DTOs
 // Add custom DTOs specific to Dividend here.
 // This section will be preserved during regeneration.
 // >>> END CUSTOM DTOs
+

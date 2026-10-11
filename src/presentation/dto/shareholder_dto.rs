@@ -247,7 +247,7 @@ impl backbone_core::ApplyUpdateDto<UpdateShareholderDto> for Shareholder {
 // Custom DTOs
 // =============================================================================
 
-// <<< CUSTOM DTOs
 // Add custom DTOs specific to Shareholder here.
 // This section will be preserved during regeneration.
 // >>> END CUSTOM DTOs
+

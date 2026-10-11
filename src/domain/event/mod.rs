@@ -20,5 +20,3 @@ pub use shareholder_event_handlers::ShareholderEventHandler;
 pub use share_transaction_events::{ShareTransactionEvent, ShareTransactionEventPublisher, NoopShareTransactionEventPublisher};
 pub use share_transaction_event_handlers::ShareTransactionEventHandler;
 
-// <<< CUSTOM
-// END CUSTOM

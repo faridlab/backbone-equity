@@ -15,10 +15,6 @@ pub type DividendValidator = EntityValidator<Dividend>;
 /// Build a validator for Dividend with all schema-defined field rules.
 pub fn dividend_validator() -> DividendValidator {
     EntityValidator::new()
-    // <<< CUSTOM RULES
-    // END CUSTOM RULES
         // No schema-derived rules — add custom rules above.
 }
 
-// <<< CUSTOM
-// END CUSTOM

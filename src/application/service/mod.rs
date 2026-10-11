@@ -12,15 +12,11 @@ pub mod share_class_service;
 pub mod shareholder_service;
 pub mod share_transaction_service;
 
-// <<< CUSTOM
-// END CUSTOM
 
 pub use dividend_service::DividendService;
 pub use share_class_service::ShareClassService;
 pub use shareholder_service::ShareholderService;
 pub use share_transaction_service::ShareTransactionService;
-// <<< CUSTOM
-// END CUSTOM
 
 // This directory's extension (hand-written; ADR-0031).
 include!("mod.ext.rs");
