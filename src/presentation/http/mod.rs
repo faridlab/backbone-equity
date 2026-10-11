@@ -11,7 +11,6 @@ pub mod shareholder_handler;
 pub mod share_transaction_handler;
 
 // <<< CUSTOM
-pub mod guarded_routes;
 // END CUSTOM
 
 // Re-exports
@@ -20,5 +19,7 @@ pub use share_class_handler::{create_share_class_routes, create_share_class_read
 pub use shareholder_handler::{create_shareholder_routes, create_shareholder_read_routes, create_shareholder_write_routes};
 pub use share_transaction_handler::{create_share_transaction_routes, create_share_transaction_read_routes, create_share_transaction_write_routes};
 // <<< CUSTOM
-pub use guarded_routes::create_guarded_equity_routes;
 // END CUSTOM
+
+// This directory's extension (hand-written; ADR-0031).
+include!("mod.ext.rs");
