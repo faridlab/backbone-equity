@@ -37,9 +37,6 @@ pub use application::service::ShareClassService;
 pub use application::service::ShareholderService;
 pub use application::service::ShareTransactionService;
 
-// Re-exports - Workflows
-pub use application::workflows::*;
-
 use std::sync::Arc;
 use axum::Router;
 use sqlx::PgPool;
