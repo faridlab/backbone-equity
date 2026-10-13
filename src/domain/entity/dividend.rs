@@ -252,6 +252,9 @@ impl backbone_orm::EntityRepoMeta for Dividend {
     fn search_fields() -> &'static [&'static str] {
         &[]
     }
+    fn relations() -> &'static [(&'static str, &'static str, &'static str)] {
+        &[("shareClass", "share_classes", "shareClassId")]
+    }
 }
 
 /// Builder for Dividend entity

@@ -270,7 +270,7 @@ impl backbone_orm::EntityRepoMeta for ShareTransaction {
         &[]
     }
     fn relations() -> &'static [(&'static str, &'static str, &'static str)] {
-        &[("shareClass", "share_classes", "shareClassId")]
+        &[("shareClass", "share_classes", "shareClassId"), ("shareholder", "shareholders", "shareholderId"), ("counterpartyShareholder", "shareholders", "counterpartyShareholderId")]
     }
 }
 
