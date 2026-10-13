@@ -148,19 +148,19 @@ impl EquityModuleBuilder {
 
         // Dividend service
         let dividend_repository = Arc::new(DividendRepository::new(db_pool.clone()));
-        let dividend_service = Arc::new(DividendService::with_repository(dividend_repository.clone()));
+        let dividend_service = Arc::new(DividendService::with_repository(dividend_repository.clone()).with_guard(Arc::new(crate::application::service::DividendRowRules)));
 
         // ShareClass service
         let share_class_repository = Arc::new(ShareClassRepository::new(db_pool.clone()));
-        let share_class_service = Arc::new(ShareClassService::with_repository(share_class_repository.clone()));
+        let share_class_service = Arc::new(ShareClassService::with_repository(share_class_repository.clone()).with_guard(Arc::new(crate::application::service::ShareClassRowRules)));
 
         // Shareholder service
         let shareholder_repository = Arc::new(ShareholderRepository::new(db_pool.clone()));
-        let shareholder_service = Arc::new(ShareholderService::with_repository(shareholder_repository.clone()));
+        let shareholder_service = Arc::new(ShareholderService::with_repository(shareholder_repository.clone()).with_guard(Arc::new(crate::application::service::ShareholderRowRules)));
 
         // ShareTransaction service
         let share_transaction_repository = Arc::new(ShareTransactionRepository::new(db_pool.clone()));
-        let share_transaction_service = Arc::new(ShareTransactionService::with_repository(share_transaction_repository.clone()));
+        let share_transaction_service = Arc::new(ShareTransactionService::with_repository(share_transaction_repository.clone()).with_guard(Arc::new(crate::application::service::ShareTransactionRowRules)));
 
 
         Ok(EquityModule {

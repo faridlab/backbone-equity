@@ -32,3 +32,69 @@ pub type ShareClassService = GenericCrudService<
     ShareClassRepository,
 >;
 
+/// The rules the schema declares for ShareClass, checked against the row a create or update
+/// would store. The generated build attaches it to [`ShareClassService`]. A refusing rule's
+/// break answers 422; a rule in shadow is logged under `backbone::write_guard` and the
+/// write goes ahead.
+pub struct ShareClassRowRules;
+
+#[async_trait::async_trait]
+impl backbone_core::write_guard::WriteGuard<ShareClass> for ShareClassRowRules {
+    async fn check(
+        &self,
+        ctx: &backbone_core::write_guard::WriteCtx<'_, ShareClass>,
+    ) -> backbone_core::write_guard::GuardOutcome {
+        use backbone_core::row_rule as r;
+        use backbone_core::violation::Violation;
+        use backbone_core::write_guard::{GuardOutcome, WriteKind};
+        let (create, update) = (ctx.kind == WriteKind::Create, ctx.kind == WriteKind::Update);
+        let Some(after) = ctx.after.filter(|_| create || update) else {
+            return GuardOutcome::allow();
+        };
+        let Ok(row) = serde_json::to_value(after) else {
+            return GuardOutcome::allow();
+        };
+        let row = &row;
+        let old = ctx.before.and_then(|b| serde_json::to_value(b).ok());
+        let mut shadow = Vec::new();
+        let mut refuse = Vec::new();
+        // `code_required` (@required on ShareClass.code)
+        if (create || (update && r::changed(old.as_ref(), row, &["code"]))) && !r::holds(&r::and(r::is_not_null(r::field(row, "code")), r::not(r::is_empty(r::trim(r::field(row, "code")))))) {
+            refuse.push(Violation::new("code", "required", "code is required"));
+        }
+        // `code_max_length` (@max(40) on ShareClass.code)
+        if (create || (update && r::changed(old.as_ref(), row, &["code"]))) && !r::holds(&r::le(r::length(r::field(row, "code")), r::Val::Num(40.0_f64))) {
+            shadow.push(Violation::new("code", "max_length", "code must be at most 40 characters").with_param("max", 40_i64));
+        }
+        // `name_required` (@required on ShareClass.name)
+        if (create || (update && r::changed(old.as_ref(), row, &["name"]))) && !r::holds(&r::and(r::is_not_null(r::field(row, "name")), r::not(r::is_empty(r::trim(r::field(row, "name")))))) {
+            refuse.push(Violation::new("name", "required", "name is required"));
+        }
+        // `name_max_length` (@max(120) on ShareClass.name)
+        if (create || (update && r::changed(old.as_ref(), row, &["name"]))) && !r::holds(&r::le(r::length(r::field(row, "name")), r::Val::Num(120.0_f64))) {
+            shadow.push(Violation::new("name", "max_length", "name must be at most 120 characters").with_param("max", 120_i64));
+        }
+        // `par_value_non_negative` (@non_negative on ShareClass.par_value)
+        if (create || (update && r::changed(old.as_ref(), row, &["par_value"]))) && !r::holds(&r::ge(r::field(row, "par_value"), r::Val::Num(0.0_f64))) {
+            shadow.push(Violation::new("par_value", "non_negative", "par_value must not be negative"));
+        }
+        // `currency_required` (@required on ShareClass.currency)
+        if (create || (update && r::changed(old.as_ref(), row, &["currency"]))) && !r::holds(&r::and(r::is_not_null(r::field(row, "currency")), r::not(r::is_empty(r::trim(r::field(row, "currency")))))) {
+            refuse.push(Violation::new("currency", "required", "currency is required"));
+        }
+        // `currency_max_length` (@max(3) on ShareClass.currency)
+        if (create || (update && r::changed(old.as_ref(), row, &["currency"]))) && !r::holds(&r::le(r::length(r::field(row, "currency")), r::Val::Num(3.0_f64))) {
+            shadow.push(Violation::new("currency", "max_length", "currency must be at most 3 characters").with_param("max", 3_i64));
+        }
+        // `share_capital_account_id_required` (@required on ShareClass.share_capital_account_id)
+        if (create || (update && r::changed(old.as_ref(), row, &["share_capital_account_id"]))) && !r::holds(&r::and(r::is_not_null(r::field(row, "share_capital_account_id")), r::not(r::is_empty(r::trim(r::field(row, "share_capital_account_id")))))) {
+            refuse.push(Violation::new("share_capital_account_id", "required", "share_capital_account_id is required"));
+        }
+        // `share_premium_account_id_required` (@required on ShareClass.share_premium_account_id)
+        if (create || (update && r::changed(old.as_ref(), row, &["share_premium_account_id"]))) && !r::holds(&r::and(r::is_not_null(r::field(row, "share_premium_account_id")), r::not(r::is_empty(r::trim(r::field(row, "share_premium_account_id")))))) {
+            refuse.push(Violation::new("share_premium_account_id", "required", "share_premium_account_id is required"));
+        }
+        GuardOutcome { refuse, shadow }
+    }
+}
+

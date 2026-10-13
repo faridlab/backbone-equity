@@ -32,3 +32,57 @@ pub type ShareTransactionService = GenericCrudService<
     ShareTransactionRepository,
 >;
 
+/// The rules the schema declares for ShareTransaction, checked against the row a create or update
+/// would store. The generated build attaches it to [`ShareTransactionService`]. A refusing rule's
+/// break answers 422; a rule in shadow is logged under `backbone::write_guard` and the
+/// write goes ahead.
+pub struct ShareTransactionRowRules;
+
+#[async_trait::async_trait]
+impl backbone_core::write_guard::WriteGuard<ShareTransaction> for ShareTransactionRowRules {
+    async fn check(
+        &self,
+        ctx: &backbone_core::write_guard::WriteCtx<'_, ShareTransaction>,
+    ) -> backbone_core::write_guard::GuardOutcome {
+        use backbone_core::row_rule as r;
+        use backbone_core::violation::Violation;
+        use backbone_core::write_guard::{GuardOutcome, WriteKind};
+        let (create, update) = (ctx.kind == WriteKind::Create, ctx.kind == WriteKind::Update);
+        let Some(after) = ctx.after.filter(|_| create || update) else {
+            return GuardOutcome::allow();
+        };
+        let Ok(row) = serde_json::to_value(after) else {
+            return GuardOutcome::allow();
+        };
+        let row = &row;
+        let old = ctx.before.and_then(|b| serde_json::to_value(b).ok());
+        let mut shadow = Vec::new();
+        let mut refuse = Vec::new();
+        // `share_class_id_required` (@required on ShareTransaction.share_class_id)
+        if (create || (update && r::changed(old.as_ref(), row, &["share_class_id"]))) && !r::holds(&r::and(r::is_not_null(r::field(row, "share_class_id")), r::not(r::is_empty(r::trim(r::field(row, "share_class_id")))))) {
+            refuse.push(Violation::new("share_class_id", "required", "share_class_id is required"));
+        }
+        // `shareholder_id_required` (@required on ShareTransaction.shareholder_id)
+        if (create || (update && r::changed(old.as_ref(), row, &["shareholder_id"]))) && !r::holds(&r::and(r::is_not_null(r::field(row, "shareholder_id")), r::not(r::is_empty(r::trim(r::field(row, "shareholder_id")))))) {
+            refuse.push(Violation::new("shareholder_id", "required", "shareholder_id is required"));
+        }
+        // `quantity_non_negative` (@non_negative on ShareTransaction.quantity)
+        if (create || (update && r::changed(old.as_ref(), row, &["quantity"]))) && !r::holds(&r::ge(r::field(row, "quantity"), r::Val::Num(0.0_f64))) {
+            shadow.push(Violation::new("quantity", "non_negative", "quantity must not be negative"));
+        }
+        // `price_per_share_non_negative` (@non_negative on ShareTransaction.price_per_share)
+        if (create || (update && r::changed(old.as_ref(), row, &["price_per_share"]))) && !r::holds(&r::ge(r::field(row, "price_per_share"), r::Val::Num(0.0_f64))) {
+            shadow.push(Violation::new("price_per_share", "non_negative", "price_per_share must not be negative"));
+        }
+        // `amount_non_negative` (@non_negative on ShareTransaction.amount)
+        if (create || (update && r::changed(old.as_ref(), row, &["amount"]))) && !r::holds(&r::ge(r::field(row, "amount"), r::Val::Num(0.0_f64))) {
+            shadow.push(Violation::new("amount", "non_negative", "amount must not be negative"));
+        }
+        // `posting_reference_max_length` (@max(80) on ShareTransaction.posting_reference)
+        if (create || (update && r::changed(old.as_ref(), row, &["posting_reference"]))) && !r::holds(&r::le(r::length(r::field(row, "posting_reference")), r::Val::Num(80.0_f64))) {
+            shadow.push(Violation::new("posting_reference", "max_length", "posting_reference must be at most 80 characters").with_param("max", 80_i64));
+        }
+        GuardOutcome { refuse, shadow }
+    }
+}
+

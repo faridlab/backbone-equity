@@ -17,6 +17,10 @@ pub use dividend_service::DividendService;
 pub use share_class_service::ShareClassService;
 pub use shareholder_service::ShareholderService;
 pub use share_transaction_service::ShareTransactionService;
+pub use dividend_service::DividendRowRules;
+pub use share_class_service::ShareClassRowRules;
+pub use shareholder_service::ShareholderRowRules;
+pub use share_transaction_service::ShareTransactionRowRules;
 
 // This directory's extension (hand-written; ADR-0031).
 include!("mod.ext.rs");
