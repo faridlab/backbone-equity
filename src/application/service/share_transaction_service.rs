@@ -56,7 +56,7 @@ impl backbone_core::write_guard::WriteGuard<ShareTransaction> for ShareTransacti
         };
         let row = &row;
         let old = ctx.before.and_then(|b| serde_json::to_value(b).ok());
-        let mut shadow = Vec::new();
+        let shadow = Vec::new();
         let mut refuse = Vec::new();
         // `share_class_id_required` (@required on ShareTransaction.share_class_id)
         if (create || (update && r::changed(old.as_ref(), row, &["share_class_id"]))) && !r::holds(&r::and(r::is_not_null(r::field(row, "share_class_id")), r::not(r::is_empty(r::trim(r::field(row, "share_class_id")))))) {
@@ -68,19 +68,19 @@ impl backbone_core::write_guard::WriteGuard<ShareTransaction> for ShareTransacti
         }
         // `quantity_non_negative` (@non_negative on ShareTransaction.quantity)
         if (create || (update && r::changed(old.as_ref(), row, &["quantity"]))) && !r::holds(&r::ge(r::field(row, "quantity"), r::Val::Num(0.0_f64))) {
-            shadow.push(Violation::new("quantity", "non_negative", "quantity must not be negative"));
+            refuse.push(Violation::new("quantity", "non_negative", "quantity must not be negative"));
         }
         // `price_per_share_non_negative` (@non_negative on ShareTransaction.price_per_share)
         if (create || (update && r::changed(old.as_ref(), row, &["price_per_share"]))) && !r::holds(&r::ge(r::field(row, "price_per_share"), r::Val::Num(0.0_f64))) {
-            shadow.push(Violation::new("price_per_share", "non_negative", "price_per_share must not be negative"));
+            refuse.push(Violation::new("price_per_share", "non_negative", "price_per_share must not be negative"));
         }
         // `amount_non_negative` (@non_negative on ShareTransaction.amount)
         if (create || (update && r::changed(old.as_ref(), row, &["amount"]))) && !r::holds(&r::ge(r::field(row, "amount"), r::Val::Num(0.0_f64))) {
-            shadow.push(Violation::new("amount", "non_negative", "amount must not be negative"));
+            refuse.push(Violation::new("amount", "non_negative", "amount must not be negative"));
         }
         // `posting_reference_max_length` (@max(80) on ShareTransaction.posting_reference)
         if (create || (update && r::changed(old.as_ref(), row, &["posting_reference"]))) && !r::holds(&r::le(r::length(r::field(row, "posting_reference")), r::Val::Num(80.0_f64))) {
-            shadow.push(Violation::new("posting_reference", "max_length", "posting_reference must be at most 80 characters").with_param("max", 80_i64));
+            refuse.push(Violation::new("posting_reference", "max_length", "posting_reference must be at most 80 characters").with_param("max", 80_i64));
         }
         GuardOutcome { refuse, shadow }
     }

@@ -56,7 +56,7 @@ impl backbone_core::write_guard::WriteGuard<Dividend> for DividendRowRules {
         };
         let row = &row;
         let old = ctx.before.and_then(|b| serde_json::to_value(b).ok());
-        let mut shadow = Vec::new();
+        let shadow = Vec::new();
         let mut refuse = Vec::new();
         // `share_class_id_required` (@required on Dividend.share_class_id)
         if (create || (update && r::changed(old.as_ref(), row, &["share_class_id"]))) && !r::holds(&r::and(r::is_not_null(r::field(row, "share_class_id")), r::not(r::is_empty(r::trim(r::field(row, "share_class_id")))))) {
@@ -64,15 +64,15 @@ impl backbone_core::write_guard::WriteGuard<Dividend> for DividendRowRules {
         }
         // `per_share_amount_non_negative` (@non_negative on Dividend.per_share_amount)
         if (create || (update && r::changed(old.as_ref(), row, &["per_share_amount"]))) && !r::holds(&r::ge(r::field(row, "per_share_amount"), r::Val::Num(0.0_f64))) {
-            shadow.push(Violation::new("per_share_amount", "non_negative", "per_share_amount must not be negative"));
+            refuse.push(Violation::new("per_share_amount", "non_negative", "per_share_amount must not be negative"));
         }
         // `shares_outstanding_non_negative` (@non_negative on Dividend.shares_outstanding)
         if (create || (update && r::changed(old.as_ref(), row, &["shares_outstanding"]))) && !r::holds(&r::ge(r::field(row, "shares_outstanding"), r::Val::Num(0.0_f64))) {
-            shadow.push(Violation::new("shares_outstanding", "non_negative", "shares_outstanding must not be negative"));
+            refuse.push(Violation::new("shares_outstanding", "non_negative", "shares_outstanding must not be negative"));
         }
         // `total_amount_non_negative` (@non_negative on Dividend.total_amount)
         if (create || (update && r::changed(old.as_ref(), row, &["total_amount"]))) && !r::holds(&r::ge(r::field(row, "total_amount"), r::Val::Num(0.0_f64))) {
-            shadow.push(Violation::new("total_amount", "non_negative", "total_amount must not be negative"));
+            refuse.push(Violation::new("total_amount", "non_negative", "total_amount must not be negative"));
         }
         // `retained_earnings_account_id_required` (@required on Dividend.retained_earnings_account_id)
         if (create || (update && r::changed(old.as_ref(), row, &["retained_earnings_account_id"]))) && !r::holds(&r::and(r::is_not_null(r::field(row, "retained_earnings_account_id")), r::not(r::is_empty(r::trim(r::field(row, "retained_earnings_account_id")))))) {
