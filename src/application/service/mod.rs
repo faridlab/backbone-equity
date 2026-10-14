@@ -22,5 +22,37 @@ pub use share_class_service::ShareClassRowRules;
 pub use shareholder_service::ShareholderRowRules;
 pub use share_transaction_service::ShareTransactionRowRules;
 
+/// A `DividendService` over `repository` with its write guard attached: the way to build it, so its writes are
+/// served only with the rules the schema declares.
+pub fn build_dividend_service(
+    repository: std::sync::Arc<crate::infrastructure::persistence::DividendRepository>,
+) -> DividendService {
+    DividendService::with_repository(repository).with_guard(std::sync::Arc::new(DividendRowRules))
+}
+
+/// A `ShareClassService` over `repository` with its write guard attached: the way to build it, so its writes are
+/// served only with the rules the schema declares.
+pub fn build_share_class_service(
+    repository: std::sync::Arc<crate::infrastructure::persistence::ShareClassRepository>,
+) -> ShareClassService {
+    ShareClassService::with_repository(repository).with_guard(std::sync::Arc::new(ShareClassRowRules))
+}
+
+/// A `ShareholderService` over `repository` with its write guard attached: the way to build it, so its writes are
+/// served only with the rules the schema declares.
+pub fn build_shareholder_service(
+    repository: std::sync::Arc<crate::infrastructure::persistence::ShareholderRepository>,
+) -> ShareholderService {
+    ShareholderService::with_repository(repository).with_guard(std::sync::Arc::new(ShareholderRowRules))
+}
+
+/// A `ShareTransactionService` over `repository` with its write guard attached: the way to build it, so its writes are
+/// served only with the rules the schema declares.
+pub fn build_share_transaction_service(
+    repository: std::sync::Arc<crate::infrastructure::persistence::ShareTransactionRepository>,
+) -> ShareTransactionService {
+    ShareTransactionService::with_repository(repository).with_guard(std::sync::Arc::new(ShareTransactionRowRules))
+}
+
 // This directory's extension (hand-written; ADR-0031).
 include!("mod.ext.rs");
