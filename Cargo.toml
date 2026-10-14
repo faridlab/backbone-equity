@@ -1,6 +1,6 @@
 [package]
 name = "backbone-equity"
-version = "0.11.0"
+version = "0.12.0"
 edition = "2021"
 description = "Cap table + equity accounting: shareholders, share classes, share transactions, dividends (10th GL producer)"
 license = "MIT OR Apache-2.0"
