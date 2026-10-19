@@ -1,6 +1,6 @@
 [package]
 name = "backbone-equity"
-version = "0.13.0"
+version = "0.13.1"
 edition = "2021"
 description = "Cap table + equity accounting: shareholders, share classes, share transactions, dividends (10th GL producer)"
 license = "MIT OR Apache-2.0"
@@ -20,8 +20,8 @@ path = "src/lib.rs"
 # or `rev = "<commit-sha>"`. Cargo dedupes the git fetch — the repo is only
 # cloned once even though four crates reference it.
 # -----------------------------------------------------------------------------
-backbone-core = { version = "3.7.0", features = ["postgres"] }
-backbone-orm = { version = "3.0.0" }
+backbone-core = { version = "3.18.0", features = ["postgres"] }
+backbone-orm = { version = "3.18.0" }
 backbone-auth = { version = "3.0.0" }
 backbone-messaging = { version = "3.0.0" }
 
@@ -39,7 +39,7 @@ rust_decimal = { version = "1.36", features = ["serde"] }
 # Transactional outbox — equity's lifecycle events (SharesIssued / SharesTransferred / SharesBoughtBack /
 # DividendDeclared / DividendPaid) are staged in the same tx as the state change, so they survive a crash
 # between commit and in-proc publish. A framework crate, not a horizontal module edge.
-backbone-outbox = { version = "3.0.0", features = ["multi_tenant"] }
+backbone-outbox = { version = "3.18.0", features = ["multi_tenant"] }
 
 # OpenAPI schema derive. The schema generator emits ungated `use utoipa::ToSchema;`
 # in every entity and DTO file, so the dep is unconditional even though the
