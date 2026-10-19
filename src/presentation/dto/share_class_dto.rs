@@ -44,7 +44,12 @@ pub struct CreateShareClassDto {
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(alias = "share_premium_account_id")]
     pub share_premium_account_id: Uuid,
+    #[serde(default = "default_create_share_class_status")]
     pub status: ShareClassStatus,
+}
+
+fn default_create_share_class_status() -> ShareClassStatus {
+    ShareClassStatus::Active
 }
 
 // =============================================================================
@@ -288,12 +293,4 @@ impl backbone_core::ApplyUpdateDto<UpdateShareClassDto> for ShareClass {
         Ok(self)
     }
 }
-
-// =============================================================================
-// Custom DTOs
-// =============================================================================
-
-// Add custom DTOs specific to ShareClass here.
-// This section will be preserved during regeneration.
-// >>> END CUSTOM DTOs
 

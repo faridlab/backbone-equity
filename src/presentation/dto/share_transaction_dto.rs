@@ -52,7 +52,7 @@ pub struct CreateShareTransactionDto {
     #[serde(alias = "txn_date")]
     pub txn_date: NaiveDate,
     #[cfg_attr(feature = "openapi", schema(example = true))]
-    #[serde(alias = "gl_posted")]
+    #[serde(default, alias = "gl_posted")]
     pub gl_posted: bool,
 }
 
@@ -120,12 +120,12 @@ pub struct PatchShareTransactionDto {
     pub price_per_share: Option<Decimal>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub amount: Option<Decimal>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "counterparty_shareholder_id")]
-    pub counterparty_shareholder_id: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "transfer_group_id")]
-    pub transfer_group_id: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "posting_reference")]
-    pub posting_reference: Option<String>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "counterparty_shareholder_id")]
+    pub counterparty_shareholder_id: Option<Option<Uuid>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "transfer_group_id")]
+    pub transfer_group_id: Option<Option<Uuid>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "posting_reference")]
+    pub posting_reference: Option<Option<String>>,
     #[cfg_attr(feature = "openapi", schema(example = "2024-01-01"))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "txn_date")]
     pub txn_date: Option<NaiveDate>,
@@ -332,12 +332,4 @@ impl backbone_core::ApplyUpdateDto<UpdateShareTransactionDto> for ShareTransacti
         Ok(self)
     }
 }
-
-// =============================================================================
-// Custom DTOs
-// =============================================================================
-
-// Add custom DTOs specific to ShareTransaction here.
-// This section will be preserved during regeneration.
-// >>> END CUSTOM DTOs
 

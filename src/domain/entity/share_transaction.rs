@@ -226,6 +226,14 @@ impl super::Entity for ShareTransaction {
 }
 
 impl backbone_core::PersistentEntity for ShareTransaction {
+    fn references() -> &'static [backbone_core::Reference] {
+        const REFERENCES: &[backbone_core::Reference] = &[
+            backbone_core::Reference::new("share_class_id", "equity.share_classes", "id"),
+            backbone_core::Reference::new("shareholder_id", "equity.shareholders", "id"),
+            backbone_core::Reference::new("counterparty_shareholder_id", "equity.shareholders", "id"),
+        ];
+        REFERENCES
+    }
     fn entity_id(&self) -> String {
         self.id.to_string()
     }

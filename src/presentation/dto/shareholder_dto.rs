@@ -33,8 +33,12 @@ pub struct CreateShareholderDto {
     pub party_id: Option<Uuid>,
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     pub name: String,
-    #[serde(alias = "holder_type")]
+    #[serde(default = "default_create_shareholder_holder_type", alias = "holder_type")]
     pub holder_type: HolderType,
+}
+
+fn default_create_shareholder_holder_type() -> HolderType {
+    HolderType::Individual
 }
 
 // =============================================================================
@@ -69,8 +73,8 @@ pub struct UpdateShareholderDto {
 #[cfg_attr(feature = "openapi", derive(ToSchema))]
 #[serde(rename_all = "camelCase")]
 pub struct PatchShareholderDto {
-    #[serde(skip_serializing_if = "Option::is_none", alias = "party_id")]
-    pub party_id: Option<Uuid>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "party_id")]
+    pub party_id: Option<Option<Uuid>>,
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
@@ -233,12 +237,4 @@ impl backbone_core::ApplyUpdateDto<UpdateShareholderDto> for Shareholder {
         Ok(self)
     }
 }
-
-// =============================================================================
-// Custom DTOs
-// =============================================================================
-
-// Add custom DTOs specific to Shareholder here.
-// This section will be preserved during regeneration.
-// >>> END CUSTOM DTOs
 

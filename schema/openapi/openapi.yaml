@@ -1552,10 +1552,8 @@ components:
         - per_share_amount
         - shares_outstanding
         - total_amount
-        - status
         - retained_earnings_account_id
         - dividend_payable_account_id
-        - metadata
       properties:
         share_class_id:
           type: string
@@ -1581,8 +1579,6 @@ components:
         dividend_payable_account_id:
           type: string
           format: uuid
-        metadata:
-          type: object
 
     UpdateDividendRequest:
       type: object
@@ -1595,7 +1591,6 @@ components:
         - status
         - retained_earnings_account_id
         - dividend_payable_account_id
-        - metadata
       properties:
         share_class_id:
           type: string
@@ -1621,8 +1616,6 @@ components:
         dividend_payable_account_id:
           type: string
           format: uuid
-        metadata:
-          type: object
 
     PatchDividendRequest:
       type: object
@@ -1651,8 +1644,6 @@ components:
         dividend_payable_account_id:
           type: string
           format: uuid
-        metadata:
-          type: object
 
     DividendList:
       type: object
@@ -1724,8 +1715,6 @@ components:
         - currency
         - share_capital_account_id
         - share_premium_account_id
-        - status
-        - metadata
       properties:
         code:
           type: string
@@ -1746,8 +1735,6 @@ components:
           format: uuid
         status:
           type: string
-        metadata:
-          type: object
 
     UpdateShareClassRequest:
       type: object
@@ -1759,7 +1746,6 @@ components:
         - share_capital_account_id
         - share_premium_account_id
         - status
-        - metadata
       properties:
         code:
           type: string
@@ -1780,8 +1766,6 @@ components:
           format: uuid
         status:
           type: string
-        metadata:
-          type: object
 
     PatchShareClassRequest:
       type: object
@@ -1805,8 +1789,6 @@ components:
           format: uuid
         status:
           type: string
-        metadata:
-          type: object
 
     ShareClassList:
       type: object
@@ -1858,8 +1840,6 @@ components:
       type: object
       required:
         - name
-        - holder_type
-        - metadata
       properties:
         party_id:
           nullable: true
@@ -1870,15 +1850,12 @@ components:
           maxLength: 150
         holder_type:
           type: string
-        metadata:
-          type: object
 
     UpdateShareholderRequest:
       type: object
       required:
         - name
         - holder_type
-        - metadata
       properties:
         party_id:
           nullable: true
@@ -1889,8 +1866,6 @@ components:
           maxLength: 150
         holder_type:
           type: string
-        metadata:
-          type: object
 
     PatchShareholderRequest:
       type: object
@@ -1904,8 +1879,6 @@ components:
           maxLength: 150
         holder_type:
           type: string
-        metadata:
-          type: object
 
     ShareholderList:
       type: object
@@ -1991,8 +1964,6 @@ components:
         - price_per_share
         - amount
         - txn_date
-        - gl_posted
-        - metadata
       properties:
         share_class_id:
           type: string
@@ -2025,8 +1996,6 @@ components:
           format: date
         gl_posted:
           type: boolean
-        metadata:
-          type: object
 
     UpdateShareTransactionRequest:
       type: object
@@ -2039,7 +2008,6 @@ components:
         - amount
         - txn_date
         - gl_posted
-        - metadata
       properties:
         share_class_id:
           type: string
@@ -2072,8 +2040,6 @@ components:
           format: date
         gl_posted:
           type: boolean
-        metadata:
-          type: object
 
     PatchShareTransactionRequest:
       type: object
@@ -2109,8 +2075,6 @@ components:
           format: date
         gl_posted:
           type: boolean
-        metadata:
-          type: object
 
     ShareTransactionList:
       type: object

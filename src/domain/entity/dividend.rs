@@ -209,6 +209,12 @@ impl super::Entity for Dividend {
 }
 
 impl backbone_core::PersistentEntity for Dividend {
+    fn references() -> &'static [backbone_core::Reference] {
+        const REFERENCES: &[backbone_core::Reference] = &[
+            backbone_core::Reference::new("share_class_id", "equity.share_classes", "id"),
+        ];
+        REFERENCES
+    }
     fn entity_id(&self) -> String {
         self.id.to_string()
     }

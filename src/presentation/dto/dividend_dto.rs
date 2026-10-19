@@ -44,6 +44,7 @@ pub struct CreateDividendDto {
     pub shares_outstanding: Decimal,
     #[serde(alias = "total_amount")]
     pub total_amount: Decimal,
+    #[serde(default = "default_create_dividend_status")]
     pub status: DividendStatus,
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(alias = "retained_earnings_account_id")]
@@ -51,6 +52,10 @@ pub struct CreateDividendDto {
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(alias = "dividend_payable_account_id")]
     pub dividend_payable_account_id: Uuid,
+}
+
+fn default_create_dividend_status() -> DividendStatus {
+    DividendStatus::Declared
 }
 
 // =============================================================================
@@ -106,8 +111,8 @@ pub struct PatchDividendDto {
     #[cfg_attr(feature = "openapi", schema(example = "2024-01-01"))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "declaration_date")]
     pub declaration_date: Option<NaiveDate>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "payment_date")]
-    pub payment_date: Option<NaiveDate>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "payment_date")]
+    pub payment_date: Option<Option<NaiveDate>>,
     #[serde(skip_serializing_if = "Option::is_none", alias = "per_share_amount")]
     pub per_share_amount: Option<Decimal>,
     #[serde(skip_serializing_if = "Option::is_none", alias = "shares_outstanding")]
@@ -312,12 +317,4 @@ impl backbone_core::ApplyUpdateDto<UpdateDividendDto> for Dividend {
         Ok(self)
     }
 }
-
-// =============================================================================
-// Custom DTOs
-// =============================================================================
-
-// Add custom DTOs specific to Dividend here.
-// This section will be preserved during regeneration.
-// >>> END CUSTOM DTOs
 
